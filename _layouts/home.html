@@ -18,12 +18,20 @@ layout: default
 
 <ol class="contents">
   {%- assign chapters = site.chapters | sort: "number" -%}
+  {%- assign letters = "A,B,C,D,E,F,G,H,I,J,K,L" | split: "," -%}
+  {%- assign appendix_index = 0 -%}
   {%- for chapter in chapters %}
+  {%- if chapter.appendix and chapter.unnumbered != true -%}
+    {%- assign label = letters[appendix_index] -%}
+    {%- assign appendix_index = appendix_index | plus: 1 -%}
+  {%- elsif chapter.unnumbered -%}
+    {%- assign label = "&bull;" -%}
+  {%- else -%}
+    {%- assign label = chapter.number -%}
+  {%- endif -%}
   <li class="contents-item{% if chapter.appendix %} is-appendix{% endif %}">
     <a href="{{ chapter.url | relative_url }}">
-      <span class="contents-number">
-        {%- if chapter.unnumbered -%}&bull;{%- elsif chapter.appendix -%}A{%- else -%}{{ chapter.number }}{%- endif -%}
-      </span>
+      <span class="contents-number">{{ label }}</span>
       <span class="contents-title">{{ chapter.title }}</span>
     </a>
   </li>
