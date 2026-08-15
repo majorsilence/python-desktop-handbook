@@ -5,477 +5,307 @@ number: 10
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/i18n/`. The example
+> ships a real German translation, and the build extracts, compiles and runs it, so
+> the pipeline described here is a pipeline that works.
 
-Must install intltool package on linux systems to provide the tools and scripts that are needed to extract the needed information from the python scripts and the programs glade files.
+## Introduction
 
-- gettext.bindtextdomain(domain, localedir) - Bind the text to main to the locale directory that is specified. Where the binary .mo files are looked for.
-- gettext.textdomain(domain) - Sets the current global domain to the domain argument. If domain is none then the current global domain is returned.
-- gettext.translation(domain, localedir, languages, class, fallback, codeset) - Set the domain and the locale directory. All this chapter will be interested in is the first two arguments domain and localedir.
-- gettext.install(domain, localedir, unicode, codeset, names) - Install the function \_() in the python builtin namespace so that it may be used easily from any python module within a program.
+Internationalization is making a program *able* to be translated; localization is
+translating it. The mechanism is **gettext**, it has not changed in twenty years,
+and most of what the previous edition said about it is still true. What has changed
+is the tooling around it: `libglade` is gone, `gtk-builder-convert` is gone,
+`intltool` has been superseded by `xgettext` reading `.ui` files directly, and
+Meson generates the whole pipeline from a few lines.
 
-## Python/PyGTK Translation {#sec-python-pygtk-translation}
+Three things have to line up, and getting two of them right produces an
+untranslated program with no error message at all:
 
-To start off here is a very small program that has been setup for localization.
+1. Strings are marked in the source and extracted into a `.po` file.
+2. The compiled `.mo` file is installed where gettext looks for it.
+3. The program binds its text domain — **twice**, once for Python and once for the
+   C library, which is the part that is specific to GTK.
 
-```python
-import pygtk, gtk
-pygtk.require("2.0")
-import locale, gettext
-
-APP="translation-example"
-DIR="po"
-
-locale.setlocale(locale.LC_ALL, '')
-gettext.bindtextdomain(APP, DIR)
-gettext.textdomain(APP)
-lang = gettext.translation(APP, DIR)
-_ = lang.gettext
-gettext.install(APP, DIR)
-```
-
-To start off the variable APP is set to "translation-example" and is used to set the domain for the translation.
+## Marking strings {#marking}
 
 ```python
-class TranslationExample(object):
-  def __init__(self):
-    self.label_1 = gtk.Label( _("Hello World!") )
-    label_2 = gtk.Label( _("Still in the HBox") )
-    button = gtk.Button( _("Click Me") )
+import gettext
 
-    button.connect("clicked", self.on_button_clicked,
-        _("Anything can go here") )
-    vbox = gtk.VBox()
-    vbox.pack_start(self.label_1) vbox.pack_start(label_2)
-    vbox.pack_start(button)
+_ = gettext.gettext
+ngettext = gettext.ngettext
 
-    win = gtk.Window()
-    win.connect("destroy", lambda wid: gtk.main_quit())
-    win.add(vbox)
-    win.show_all()
-
-  def on_button_clicked(self, widget, data=None):
-    self.label_1.set_text( _("Hello ") + str(data) )
-
-if __name__ == "__main__":
-  TranslationExample()
-  gtk.main()
+self.set_title(_("Greeter"))
 ```
 
-For more indepth coverage of gettext visit <http://docs.python.org/library/gettext.html>. To download the tools from windows get them from the gnu site <ftp://ftp.gnu.org/gnu/gettext/gettext-tools-0.13.1.bin.woe32.zip>.
-
-Now use the gettext command tool to extract the needed strings from all the python files and create the translation-example.pot file.
+`_()` is a convention, not a language feature: it is short, and `xgettext` looks
+for it by name. Some of the shapes that come up:
 
 ```python
-gettext --language=Python --keyword=_ --keyword=N_
-    --output=translation-example.pot translation-example.py
+_("Your name")                                   # a string to translate now
+N_("Deferred")                                   # mark it, translate it later
+ngettext("one file", "{n} files", n).format(n=n) # a plural
+pgettext("verb", "Greet")                        # disambiguate by context
 ```
 
-Now for each language that will be available for the application a .po file must be created. So if Canadian English is the language is to be used:
+`N_()` is for strings that have to be marked where they are *defined* but
+translated where they are *used* — a table of menu labels at module level, for
+instance. It does nothing at runtime; it just gives `xgettext` something to find.
+
+### Plurals {#plurals}
 
 ```python
-msginit --input=translation-example.pot --locale=en_CA
+ngettext("You have said hello once.",
+         "You have said hello {count} times.",
+         self.count).format(count=self.count)
 ```
 
-Will output a en\_CA.po file. American English would be:
+Do not write `if n == 1`. English has two plural forms, Japanese has one, Polish
+has three, Arabic has six, and the rule for choosing between them lives in the
+`Plural-Forms` header of each `.po` file. `ngettext` applies whichever rule the
+translator's language needs, and your code never learns what it was.
+
+### Context {#context}
+
+The same English word is often two different words elsewhere. "Open" as a verb on
+a button is not "Open" as a state in a status line; German needs *Öffnen* and
+*Geöffnet*. `pgettext` lets the translator tell them apart:
 
 ```python
-msginit --input=translation-example.pot --locale=en_US
+def pgettext(context, message):
+    lookup = f"{context}\x04{message}"
+    translated = gettext.gettext(lookup)
+    return message if translated == lookup else translated
 ```
 
-Will output an en\_US.po file. German would be:
+That `\x04` is how gettext encodes a context, and the fallback is what makes an
+untranslated string come back without the context glued to the front of it.
+
+### Formatting {#formatting}
+
+**Never build a sentence by concatenation.**
 
 ```python
-msginit --input=translation-example.pot --locale=de_DE
+_("Hello, {name}!").format(name=name)      # good
+_("Hello, ") + name + "!"                  # untranslatable
 ```
 
-This of course would output de.po.
+Word order differs between languages, and a translator has to be able to move the
+parts around. Named placeholders are better than positional ones for the same
+reason: `{name}` tells the translator what will be there, and can be reordered
+without counting.
 
-Finally the .po files must be edited and the localized language put into their proper places. Just make sure that when the .po files are created that the *charset* is set to *utf-8*.
+### Comments for translators {#translator-comments}
 
-<a id="translations-po-translations-example"></a>
+A translator sees the string and nothing else. If it is ambiguous, say so:
+
+```python
+# Translators: this is the window title.
+self.set_title(_("Greeter"))
+```
+
+`xgettext --add-comments=Translators:` copies those into the `.po` file. It costs
+a line and saves a round trip.
+
+## The GTK-specific part {#binding-the-domain}
+
+This is the section people skip and then spend an afternoon on.
+
+```python
+import gettext
+import locale
+
+locale.setlocale(locale.LC_ALL, "")
+
+gettext.bindtextdomain(DOMAIN, LOCALE_DIR)
+gettext.textdomain(DOMAIN)
+
+locale.bindtextdomain(DOMAIN, LOCALE_DIR)     # the C library's copy
+locale.textdomain(DOMAIN)
+```
+
+Three separate traps live in those six lines.
+
+**`setlocale(locale.LC_ALL, "")` is required.** Without it the C library stays in
+the `C` locale, and nothing is translated no matter how correct everything else
+is. The empty string means "take it from the environment".
+
+**The domain has to be bound twice.** `gettext.bindtextdomain()` sets it for
+Python's `_()` calls. `locale.bindtextdomain()` sets it for the C library — and
+that is the one `GtkBuilder` uses when it translates `translatable="yes"` strings
+out of a `.ui` file. Bind only the Python one and your code is translated while
+your interface files are not, which is a confusing half-working state.
+
+**On Windows, `locale.bindtextdomain` does not exist.** Python's `locale` module
+does not expose it there, and you have to call into `libintl-8.dll` with `ctypes`:
+
+```python
+import ctypes
+libintl = ctypes.cdll.LoadLibrary("libintl-8.dll")
+libintl.bindtextdomain(DOMAIN.encode(), LOCALE_DIR.encode())
+libintl.bind_textdomain_codeset(DOMAIN.encode(), b"UTF-8")
+```
+
+## Strings in .ui files {#ui-files}
+
+```xml
+<interface domain="greeter">
+  <template class="GreeterAboutWindow" parent="GtkWindow">
+    <property name="title" translatable="yes">About</property>
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes"
+                  comments="Shown under the title">A small example.</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkButton">
+        <property name="label" translatable="yes" context="verb">Close</property>
+      </object>
+    </child>
+  </template>
+</interface>
+```
+
+`translatable="yes"` marks it, `context=` is the equivalent of `pgettext`, and
+`comments=` is the equivalent of a `Translators:` comment. The `domain` attribute
+on `<interface>` says which text domain the file belongs to.
+
+Modern `xgettext` reads `.ui` files directly — you list them alongside the `.py`
+files and it works out the rest. That is what `intltool` used to be for, and it is
+why a modern project has no `intltool-extract`, no `.h` files generated from XML,
+and no `.in` files.
+
+## The pipeline {#pipeline}
+
+Four commands, in order. The example wraps them in
+`update-translations.sh`; a real project has Meson generate them.
+
+**Extract** the strings into a template:
+
+```bash
+xgettext \
+  --from-code=UTF-8 \
+  --add-comments=Translators: \
+  --keyword=_ \
+  --keyword=N_ \
+  --keyword=ngettext:1,2 \
+  --keyword=pgettext:1c,2 \
+  --output=po/greeter.pot \
+  greeter.py window.ui
+```
+
+The `--keyword` arguments are how `xgettext` learns your calls. `ngettext:1,2`
+says arguments one and two are the singular and the plural; `pgettext:1c,2` says
+argument one is a context and argument two is the string. Omit them and plurals
+and contexts are silently missed.
+
+**Start** a language, once:
+
+```bash
+msginit --locale=de --input=po/greeter.pot --output=po/de.po
+```
+
+**Merge** later changes into existing translations:
+
+```bash
+msgmerge --update --backup=none po/de.po po/greeter.pot
+```
+
+`msgmerge` keeps the translations that still apply and marks the ones whose source
+string changed as **fuzzy** — translated, but needing review. Fuzzy entries are
+*not used* at runtime, which is deliberate: a stale translation is worse than an
+untranslated string.
+
+**Compile** to the binary format gettext reads:
+
+```bash
+msgfmt --check --output-file=locale/de/LC_MESSAGES/greeter.mo po/de.po
+```
+
+That path is not negotiable. gettext looks in
+`<locale dir>/<language>/LC_MESSAGES/<domain>.mo` and nowhere else. Nearly every
+"my translations do not load" is a wrong path, a wrong domain, or a `.mo` that
+was never recompiled after the `.po` changed.
+
+`--check` catches the mistakes that would otherwise show up as a crash in one
+language: a translation with a `%s` where the original had `%d`, or a missing
+placeholder.
+
+## Testing it {#testing}
+
+```bash
+LANGUAGE=de python3 greeter.py
+LANGUAGE=de LC_ALL=de_DE.UTF-8 python3 greeter.py
+```
+
+`LANGUAGE` looks like the convenient one: it overrides only the message language,
+takes a colon-separated list of fallbacks, and does not need the locale to be
+generated on your system.
+
+**It is not enough on its own, and the way it fails is confusing.** The C library
+ignores `LANGUAGE` when the locale is `C`, and `setlocale(LC_ALL, "")` leaves you
+in `C` if no `LC_*` variable is set. Python's `gettext` module reads `LANGUAGE`
+itself, so it does not care — which means `LANGUAGE=de` alone gives you a program
+whose Python strings are German and whose `.ui` strings are English:
 
 ```text
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
-msgid ""
-msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-02-17 16:01-0330\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+$ LANGUAGE=de example-app
+TITLE:  Example App           # from window.ui — not translated
+LABEL:  2-mal gezählt.        # from ngettext() in Python — translated
 
-#: translation-example.py:20
-msgid "Hello "
-msgstr ""
-
-#: translation-example.py:23
-msgid "Hello World!"
-msgstr ""
-
-#: translation-example.py:24
-msgid "Still in the HBox"
-msgstr ""
-
-#: translation-example.py:25
-msgid "Click Me"
-msgstr ""
-
-#: translation-example.py:29
-msgid "Anything can go here"
-msgstr ""
+$ LC_ALL=de_DE.UTF-8 LANGUAGE=de example-app
+TITLE:  Beispielanwendung
+LABEL:  2-mal gezählt.
 ```
 
-Now what you need to do is edit the .po files so that the empty msgstr have the translated text. So what this means is that:
+So test with a real locale. `locale -a` lists what you have and
+`sudo locale-gen de_DE.UTF-8` adds one. If you see exactly the split above —
+code translated, interface files not — the cause is either this or a missing
+`locale.bindtextdomain`, and they look identical from the outside.
 
-```text
-#: translation-example.py:20
-msgid "Hello "
-msgstr ""
-```
+Two habits worth building. Check a **pseudolocale** before you have translators:
+`msgfmt` a `.po` where every string is wrapped in brackets, and anything unbracketed
+in the running application is a string you forgot to mark. And check a language
+whose words are much longer than English — German is the traditional choice — to
+find the buttons your layout cannot grow to fit.
 
-Would become in German:
+## More than words {#beyond-strings}
 
-```text
-#: translation-example.py:20
-msgid "Hello "
-msgstr "Guten Tag"
-```
+Translation is the biggest part of this, not all of it.
 
-Once all the strings are translated then the .po file must be converted into a binary .mo file and placed in its proper folder. So the en\_CA.po file would be converted into translation-example.mo and placed in the folder ./po/en\_CA/LC\_MESSAGES/.
+**Dates, numbers and currency** follow the locale, not the language. Use
+`GLib.DateTime.format()` with the `%x` and `%X` placeholders, or Python's
+`locale.format_string()` and `babel`, rather than assembling them yourself.
+
+**Right-to-left languages** need the whole interface mirrored, and GTK does it for
+you — provided you never wrote `LEFT` or `RIGHT`. Use `Gtk.Align.START` and
+`Gtk.Align.END`, `set_margin_start()` and `set_margin_end()`, and the mirroring is
+free. Test it without knowing any Arabic:
 
 ```bash
-msgfmt --output-file=translation-example.mo en_CA.po
+GTK_DEBUG=interactive python3 app.py     # the Inspector can flip direction
 ```
 
-Now copy the translation-example.mo file to the folder ./po/en\_CA/LC\_MESSAGES/. To test the the translated copy do the following:
-
-```python
-LANG=lang python myapp.py
-```
-
-So to test translation-example.py with german that would become:
-
-```python
-LANG=de_DE.UTF-8 python translation-example.py
-```
-
-It should be noted that on some systems that the .UTF-8 part is not needed.
-
-## gtk.glade Translation {#sec-gtk-glade-translation}
-
-Translating a project that makes use of a glade file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)).
-
-![Glade Translation Project](images/translations/translations-example.png){: #fig-translations-glade-translation-project width="40%"}
-
-```python
-import pygtk
-pygtk.require("2.0")
-import gtk, gtk.glade
-import locale, gettext
-
-APP="translation-example"
-DIR="po-glade"
-
-locale.setlocale(locale.LC_ALL, '')
-gettext.bindtextdomain(APP, DIR)
-gettext.textdomain(APP)
-lang = gettext.translation(APP, DIR)
-_ = lang.gettext
-gettext.install(APP, DIR)
-
-class TranslationExample(object):
-  def on_button_clicked(self, widget, data=None):
-    self.label_1.set_text( _("Hello ") + str(data) )
-
-  def __init__(self):
-    self.gladefile = gtk.glade.XML("translation-example.glade")
-    gtk.glade.bindtextdomain(APP, DIR)
-    self.gladefile.signal_autoconnect(self)
-
-    self.main_window = self.gladefile.get_widget("window1")
-    self.main_window.connect("delete_event", lambda wid, we: gtk.main_quit())
-    self.main_window.show_all()
-
-if __name__ == "__main__":
-  TranslationExample()
-  gtk.main()
-```
-
-Create a translation-example.glade.h file by running intltool-extract on translation-example.glade. This is needed to extract the strings to translate with the gettext command line tool.
-
-```bash
-intltool-extract --type=gettext/glade translation-example.glade
-```
-
-Now use the xgettext command tool to extract the needed strings from all the python files as well as the translation-example.glade.h header file that was created and create the translation-example.pot file.
-
-```bash
-xgettext --language=Python --keyword=_ --keyword=N_
-    --output=translation-example.pot translation-example.py
-    translation-example.glade.h
-```
-
-Now for each language that will be available for the application a .po file must be created. So if Canadian English is the language is to be used:
-
-```python
-msginit --input=translation-example.pot --locale=en_CA
-```
-
-Will output a en\_CA.po file. American English would be:
-
-```python
-msginit --input=translation-example.pot --locale=en_US
-```
-
-Will output an en\_US.po file. German would be:
-
-```python
-msginit --input=translation-example.pot --locale=de_DE
-```
-
-This of course would put de.po.
-
-Finally the .po files must be edited and the localized language put into their proper places. To do this please refer back to [Python/PyGTK Translation](10-internationalization.html#translations-po-translations-example) as it shows you how to use the *msgfmt* command and proper way to do the translations.
-
-## gtk.Builder Translation {#sec-gtk-builder-translation}
-
-Translating a project that makes use of a gtk.Builder file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)). First this file must be translated to a gtk.Builder file using the gtk-builder-convert (See section [Builder](02-more-gtk4.html#ui-files)) script.
-
-```python
-import pygtk
-pygtk.require("2.0")
-import gtk
-import locale, gettext
-
-APP="translation-example"
-DIR="po-glade"
-
-locale.setlocale(locale.LC_ALL, '')
-# This is needed to make gtk.Builder work by specifying the
-# translations directory
-locale.bindtextdomain(APP, DIR)
-
-gettext.bindtextdomain(APP, DIR)
-gettext.textdomain(APP)
-lang = gettext.translation(APP, DIR)
-_ = lang.gettext
-gettext.install(APP, DIR)
-
-class TranslationExample(object):
-  def on_button_clicked(self, widget, data=None):
-    self.label_1.set_text( _("Hello ") + str(data) )
-
-  def __init__(self):
-    self.gladefile = gtk.Builder()
-    self.gladefile.set_translation_domain(APP)
-    self.gladefile.add_from_file("translation-example.xml")
-    self.gladefile.connect_signals(self)
-
-    self.main_window = self.gladefile.get_object("window1")
-    self.main_window.connect("delete_event", lambda wid, we: gtk.main_quit())
-    self.main_window.show_all()
-
-if __name__ == "__main__":
-  TranslationExample()
-  gtk.main()
-```
-
-Translating a gtk.Builder xml file uses the exact same commands as translating a glade file, however .glade is replaced with .xml for the file that is being used. So create a translation-example.xml.h file by running intltool-extract on translation-example.xml. This is needed to extract the strings to translate with the gettext command line tool.
-
-```bash
-intltool-extract --type=gettext/glade translation-example.xml
-```
-
-Now use the xgettext command tool to extract the needed strings from all the python files as well as the translation-example.glade.h header file that was created and create the translation-example.pot file.
-
-```bash
-xgettext --language=Python --keyword=_ --keyword=N_
-    --output=translation-example.pot translation-example.py
-    translation-example.xml.h
-```
-
-Now for each language that will be available for the application a .po file must be created. So if Canadian English is the language is to be used:
-
-```python
-msginit --input=translation-example.pot --locale=en_CA
-```
-
-Will output a en\_CA.po file. American English would be:
-
-```python
-msginit --input=translation-example.pot --locale=en_US
-```
-
-Will output an en\_US.po file. German would be:
-
-```python
-msginit --input=translation-example.pot --locale=de_DE
-```
-
-This of course would put de.po.
-
-Finally the .po files must be edited and the localized language put into their proper places. To do this please refer back to [Python/PyGTK Translation](10-internationalization.html#translations-po-translations-example) as it shows you how to use the *msgfmt* command and proper way to do the translations.
-
-## Testing Translations {#sec-testing-translations}
-
-To make sure that the translation is working properly it should be tested. This section will go into a bit more detail on setting this up.
-
-First the language suppport files that the application has been translated into must be installed on the operating system. This section assumes ubuntu is the test system and the examples are geared toward it.
-
-So lets assume the test system is ubuntu and German is the language that is to be tested. The easiest way to make sure that German language support is installed is to install the *language-support-de* package. This package will install all the german translation packages for the test system. If you wish you do not need to install this meta package, but can hunt down all the individual packages for german support.
-
-Now make sure that the .mo files, in this case translation-example.mo, are copied to each of their respective language folders; Eg ./po/en\_CA/LC\_MESSAGES/. To test the the translated copy do the following:
-
-```python
-LANG=lang python myapp.py
-```
-
-So to test translation-example.py with german that would become:
-
-```python
-LANG=de_DE.UTF-8 python translation-example.py
-```
-
-It should be noted that on some systems that the .UTF-8 part is not needed.
-
-### Testing on Win32/Win64
-
-From the command line:
-
-```python
-SET Lang=de_DE
-myapp.py
-```
-
-Another problem on Windows with gtkbuilder is that that it will not be translated in a pygtk application. You have to force it using ctypes[^1]. At least at the time of writting (pygtk 2.16 with gtk 2.16 and 2.18)
-
-After this line of code
-
-```python
-gettext.install(APP,localedir=DIR)
-```
-
-You will then try something like this:
-
-```python
-try:
-    libintl = ctypes.cdll.LoadLibrary("C:\\GTK\\gtk-2.16.6\\bin\\intl.dll")
-    libintl.bindtextdomain(APP, DIR)
-except:
-    print "Error Loading translations into gtk.builder files"
-```
-
-## Translation Cheatsheet {#sec-translation-cheatsheet}
-
-Small quick cheetsheet of the commands that are needed to translate.
-
-```bash
-intltool-extract --type=gettext/glade translation-example.glade
-```
-
-Extract from both glade/builder and python scripts
-
-```bash
-xgettext --language=Python --keyword=_ --keyword=N_
-    --output=translation-example.pot translation-example.py
-    translation-example.glade.h
-```
-
-Canadian English
-
-```python
-msginit --input=translation-example.pot --locale=en_CA
-```
-
-American English
-
-```python
-msginit --input=translation-example.pot --locale=en_US
-```
-
-German
-
-```python
-msginit --input=translation-example.pot --locale=de_DE
-```
-
-Change charset in each .po file to "charset=UTF-8" and put in each translation string. Create binary .mo files for each .po file and place them in their proper ./po/LANG/LC\_MESSAGES/ folder.
-
-```bash
-msgfmt --output-file=translation-example.mo en_CA.po
-msgfmt --output-file=translation-example.mo en_US.po
-msgfmt --output-file=translation-example.mo de_DE.po
-```
-
-Test each language the application using each language that it has been translated into.
-
-```python
-LANG=en_CA.UTF-8 python translation-example.py
-LANG=en_US.UTF-8 python translation-example.py
-LANG=de_DE.UTF-8 python translation-example.py
-```
-
-## Locale Lists {#sec-translations-locale-lists}
-
-To be able to use and test any of these locale languages the language support packages for your linux distrubtion must be installed. On ubuntu these start with *language-support* and can be found using the synaptic package manager. So for german it would be *language-support-de*.
-
-Here is a short list of locales[^2] that can be translated to.
-
-en\_US
-: English, United States of America
-
-en\_CA
-: English, Canada
-
-en\_AU
-: English, Australian
-
-en\_GB
-: English, Great Britain/United Kingdom
-
-es\_MX
-: Spanish, Mexico
-
-es\_ES,
-: Spanish, Spain
-
-de\_DE
-: Germany, German
-
-fr\_FR
-: French, France
-
-fr\_CA
-: French, Canadian
-
-it\_IT
-: Italian, Italy
-
-ru\_RU
-: Russian, Russia
-
-pt\_BR
-: Portuguese, Brazil
-
-## Summary {#sec-translations-summary}
-
-For more information on this topic please see these sites:
-
-- <http://docs.python.org/library/gettext.html>
-- <http://www.learningpython.com/2006/12/03/translating-your-pythonpygtk-application/>
-- <http://faq.pygtk.org/index.py?req=show&file=faq22.002.htp>
-
-[^1]: For more information see <https://bugzilla.gnome.org/show_bug.cgi?id=574520>
-[^2]: On my ubuntu system there is a very nice list at /usr/share/i18n/SUPPORTED. This is a big list that does not include long form of the location of the locale.
+**Sorting** is not `sorted()`. `GLib.utf8_collate_key()` gives you a key that sorts
+the way the user's locale expects, which is the difference between an ä next to an
+a and an ä at the end of the alphabet.
+
+**Icons and colours** carry meanings that do not travel. So does text in images —
+which is a good reason to draw text with Pango rather than shipping a picture of it.
+
+## Summary
+
+- `_()`, `N_()`, `ngettext()` and `pgettext()` mark strings; format with named
+  placeholders and never concatenate.
+- Bind the text domain **twice**: `gettext.bindtextdomain` for Python and
+  `locale.bindtextdomain` for the C library, or `.ui` files stay untranslated.
+- `locale.setlocale(locale.LC_ALL, "")` or none of it works.
+- `xgettext` reads `.ui` files directly; `intltool` is not needed any more.
+- `--keyword` arguments teach `xgettext` about your plurals and contexts.
+- Fuzzy entries are deliberately ignored at runtime.
+- `.mo` files go in `<locale dir>/<language>/LC_MESSAGES/<domain>.mo`, exactly.
+- Test with `LANGUAGE=de`, a pseudolocale, and a right-to-left language.
+- Use `START`/`END` rather than `LEFT`/`RIGHT` and mirroring is free.
+
+[Packaging and Distribution](11-packaging.html) is next, and it is where the
+translations, the desktop file, the icon and the schema all get installed together.

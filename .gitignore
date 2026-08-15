@@ -16,3 +16,6 @@ examples/gtk4/cairo/surfaces.svg
 examples/gtk4/cairo/surfaces.ps
 examples/gtk4/cairo/*.png
 examples/gtk4/printing/*.pdf
+examples/gtk4/i18n/locale/
+examples/gtk4/packaging/builddir/
+examples/gtk4/packaging/_install/

@@ -1,0 +1,4 @@
+data/com.example.ExampleApp.desktop.in
+data/com.example.ExampleApp.metainfo.xml.in
+src/application.py
+src/window.ui

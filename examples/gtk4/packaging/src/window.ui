@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="example-app">
+  <requires lib="gtk" version="4.0"/>
+  <template class="ExampleAppWindow" parent="AdwApplicationWindow">
+    <property name="title" translatable="yes">Example App</property>
+    <property name="default-width">420</property>
+    <property name="default-height">280</property>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar"/>
+        </child>
+        <property name="content">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="valign">center</property>
+            <property name="margin-top">24</property>
+            <property name="margin-bottom">24</property>
+            <property name="margin-start">24</property>
+            <property name="margin-end">24</property>
+            <child>
+              <object class="GtkLabel" id="greeting">
+                <property name="label" translatable="yes">An application that installs itself properly.</property>
+                <property name="wrap">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="count_button">
+                <property name="label" translatable="yes">Count</property>
+                <property name="halign">center</property>
+                <signal name="clicked" handler="on_count_clicked"/>
+                <style><class name="suggested-action"/></style>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+</interface>

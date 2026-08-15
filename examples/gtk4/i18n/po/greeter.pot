@@ -1,0 +1,68 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR The example authors
+# This file is distributed under the same license as the greeter package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: greeter\n"
+"Report-Msgid-Bugs-To: you@example.com\n"
+"POT-Creation-Date: 2026-08-15 12:37+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#. Translators: this is the window title.
+#: greeter.py:79
+msgid "Greeter"
+msgstr ""
+
+#: greeter.py:90
+msgid "Your name"
+msgstr ""
+
+#: greeter.py:93
+msgctxt "verb"
+msgid "Greet"
+msgstr ""
+
+#: greeter.py:104
+#, python-format
+msgid "Language: %s"
+msgstr ""
+
+#: greeter.py:109
+msgid "stranger"
+msgstr ""
+
+#: greeter.py:113
+#, python-brace-format
+msgid "Hello, {name}!"
+msgstr ""
+
+#: greeter.py:122
+#, python-brace-format
+msgid "You have said hello once."
+msgid_plural "You have said hello {count} times."
+msgstr[0] ""
+msgstr[1] ""
+
+#: window.ui:5
+msgid "About"
+msgstr ""
+
+#. Shown under the title
+#: window.ui:18
+msgid "A small example of a translated application."
+msgstr ""
+
+#: window.ui:24
+msgctxt "verb"
+msgid "Close"
+msgstr ""

@@ -42,6 +42,17 @@ jobs:
         # A session bus, because some examples own a name on it.
         run: dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
 
+      - name: Build, validate and install the packaging example
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            meson ninja-build libglib2.0-dev-bin libglib2.0-bin \
+            desktop-file-utils appstream gettext
+          cd examples/gtk4/packaging
+          meson setup builddir --prefix="$PWD/_install"
+          meson compile -C builddir
+          meson test -C builddir        # desktop file, AppStream metadata, schema
+          meson install -C builddir
+
   pdf:
     name: Build PDF
     runs-on: ubuntu-latest

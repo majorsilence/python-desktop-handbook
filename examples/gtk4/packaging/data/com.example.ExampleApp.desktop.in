@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Example App
+Comment=An application that installs itself properly
+Exec=example-app
+Icon=com.example.ExampleApp
+Terminal=false
+Categories=Utility;GTK;
+Keywords=example;template;
+StartupNotify=true
+DBusActivatable=true

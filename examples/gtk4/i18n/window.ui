@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="greeter">
+  <requires lib="gtk" version="4.0"/>
+  <template class="GreeterAboutWindow" parent="GtkWindow">
+    <property name="title" translatable="yes">About</property>
+    <property name="default-width">360</property>
+    <property name="child">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+        <property name="margin-start">12</property>
+        <property name="margin-end">12</property>
+        <child>
+          <object class="GtkLabel">
+            <!-- Translators: shown in the about window under the title. -->
+            <property name="label" translatable="yes" comments="Shown under the title">A small example of a translated application.</property>
+            <property name="wrap">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="label" translatable="yes" context="verb">Close</property>
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>

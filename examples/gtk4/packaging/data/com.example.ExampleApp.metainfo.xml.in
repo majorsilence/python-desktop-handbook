@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.example.ExampleApp</id>
+
+  <name>Example App</name>
+  <summary>An application that installs itself properly</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      A minimal GTK 4 application, packaged the way GNOME applications are
+      packaged: a Meson build, a compiled resource bundle, a settings schema,
+      a desktop file, an icon, translations and this metadata.
+    </p>
+    <p>It exists to be read rather than used.</p>
+  </description>
+
+  <launchable type="desktop-id">com.example.ExampleApp.desktop</launchable>
+
+  <developer id="com.example">
+    <name>The example authors</name>
+  </developer>
+
+  <url type="homepage">https://example.com/</url>
+  <url type="bugtracker">https://example.com/issues</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-01-15">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
