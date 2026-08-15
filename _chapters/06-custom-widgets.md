@@ -93,6 +93,8 @@ where the children come from changes.
 
 The full example is `examples/gtk4/custom-widgets/composed-widget.py`.
 
+![A composed widget: one entry, one drop down and one button, presented as a single thing](images/screenshots/composed-widget.png){: #fig-composed width="70%"}
+
 ## A widget that lays out children {#layout}
 
 When no existing container does what you need — and GTK has a lot of them, so
@@ -232,6 +234,8 @@ Override it properly only when you want to draw *around* the children — a
 background, a focus ring, separators between rows.
 
 The full example is `examples/gtk4/custom-widgets/flow-box-widget.py`.
+
+![Children wrapped onto three rows by a custom container](images/screenshots/flow-box-widget.png){: #fig-wrapbox width="65%"}
 
 ## Layout managers {#layout-managers}
 

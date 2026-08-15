@@ -23,6 +23,7 @@ def on_switch_active(switch, _pspec):
 
 def on_activate(app):
     window = Gtk.ApplicationWindow(application=app, title="Toggles")
+    window.set_default_size(320, 300)
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     box.set_margin_top(12)

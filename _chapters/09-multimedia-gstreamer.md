@@ -38,6 +38,18 @@ The plugin packages matter more than the library. `good` is what you want,
 `bad` is where a lot of useful-but-less-polished elements live, and `libav`
 carries the codecs that make ordinary video files play.
 
+**`Gtk.MediaFile` needs one more package**, and its absence is quiet:
+
+```bash
+sudo apt install libgtk-4-media-gstreamer
+```
+
+GTK's media support is a loadable backend, not part of the library. Without it
+`Gtk.Video` shows a "no media" symbol, `get_duration()` stays at zero and nothing
+is logged — the file looks unplayable when the problem is that GTK has nothing to
+play it with. If a file plays with `gst-launch-1.0` and not in your window, this
+is why.
+
 ## A video player {#video-player}
 
 ```python
@@ -99,6 +111,8 @@ def on_error(self, media, _pspec):
 ```
 
 The full example is `examples/gtk4/multimedia/video-player.py`.
+
+![Gtk.Video playing the generated test clip](images/screenshots/video-player.png){: #fig-video-player width="55%"}
 
 ## Pipelines {#pipelines}
 

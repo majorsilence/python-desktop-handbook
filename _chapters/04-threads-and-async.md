@@ -198,6 +198,8 @@ come back through a queue you poll from a `GLib.timeout_add`, or through
 
 The full example is `examples/gtk4/threads/worker-thread.py`.
 
+![Progress reported from a worker thread through GLib.idle_add](images/screenshots/worker-thread.png){: #fig-worker-thread width="55%"}
+
 ## Breaking work up {#chunking}
 
 For work that divides neatly, there is a third option that needs neither a thread

@@ -139,6 +139,8 @@ A list view scrolls, but it does not scroll itself — put it in a
 
 The full example is `examples/gtk4/list-view.py`.
 
+![A list view over a Gio.ListStore](images/screenshots/list-view.png){: #fig-list-view width="50%"}
+
 ### A sortable table {#column-view}
 
 `Gtk.ColumnView` is a list view with columns. Each column has its own factory, so
@@ -197,6 +199,8 @@ recent = Gtk.CustomFilter.new(lambda item: item.size > 5_000)
 ```
 
 The full example is `examples/gtk4/column-view.py`.
+
+![A column view, sortable by header and filtered by the search entry](images/screenshots/column-view.png){: #fig-column-view width="75%"}
 
 ### Choosing between the views {#which-view}
 
@@ -329,6 +333,8 @@ text, `Gio.File` for files.
 
 The full example is `examples/gtk4/drag-and-drop.py`.
 
+![Drag sources on the left, a drop target on the right](images/screenshots/drag-and-drop.png){: #fig-drag-and-drop width="65%"}
+
 ## Images and pictures {#images}
 
 There are two widgets, and picking the wrong one is the usual cause of an image
@@ -361,6 +367,8 @@ manipulate pixels, in which case load a pixbuf and convert with
 `FILL` (stretch) or `SCALE_DOWN` (never enlarge).
 
 The full example is `examples/gtk4/images.py`.
+
+![A themed icon above a photograph in a Gtk.Picture](images/screenshots/images.png){: #fig-images width="55%"}
 
 ## Tooltips {#tooltips}
 
@@ -462,6 +470,8 @@ compiled into the binary rather than looked up on disk. That is covered with the
 rest of installation in the packaging chapter.
 
 The full example is `examples/gtk4/builder/`.
+
+![A window whose layout came from a .ui file](images/screenshots/builder-app.png){: #fig-builder width="55%"}
 
 ## Notifications, not status icons {#notifications}
 

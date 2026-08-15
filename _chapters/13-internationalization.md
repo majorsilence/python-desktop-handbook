@@ -263,6 +263,18 @@ So test with a real locale. `locale -a` lists what you have and
 code translated, interface files not — the cause is either this or a missing
 `locale.bindtextdomain`, and they look identical from the outside.
 
+The example in this chapter builds its widgets in Python rather than from a `.ui`
+file, so `LANGUAGE` on its own is enough for it — which is why both of these are
+the same program with one environment variable changed:
+
+![The greeter in its original English](images/screenshots/greeter.png){: #fig-greeter-en width="48%"}
+
+![The same window under LANGUAGE=de](images/screenshots/greeter-de.png){: #fig-greeter-de width="48%"}
+
+Note that the plural is not a suffix on a number: *"You have said hello once"*
+becomes *"Sie haben einmal Hallo gesagt"*, a different sentence, which is what
+`ngettext` is for.
+
 Two habits worth building. Check a **pseudolocale** before you have translators:
 `msgfmt` a `.po` where every string is wrapped in brackets, and anything unbracketed
 in the running application is a string you forgot to mark. And check a language

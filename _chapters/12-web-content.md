@@ -196,6 +196,8 @@ modify what is there.
 The full example is `examples/gtk4/web/javascript-bridge.py`, which does both
 directions.
 
+![A page posting a message to Python, and Python reading a value back](images/screenshots/javascript-bridge.png){: #fig-js-bridge width="80%"}
+
 ### Treat the page as untrusted {#bridge-security}
 
 A message handler is a hole through the sandbox that you made on purpose. Once a

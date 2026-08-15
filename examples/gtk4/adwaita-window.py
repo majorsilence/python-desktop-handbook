@@ -18,7 +18,7 @@ class Window(Adw.ApplicationWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.set_title("Adwaita Window")
-        self.set_default_size(420, 260)
+        self.set_default_size(420, 360)
 
         self.toasts = Adw.ToastOverlay()
 

@@ -15,6 +15,7 @@ def on_clicked(button, message):
 
 def on_activate(app):
     window = Gtk.ApplicationWindow(application=app, title="Buttons")
+    window.set_default_size(520, 120)
 
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
     box.set_margin_top(12)

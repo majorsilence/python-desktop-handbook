@@ -70,6 +70,8 @@ code.
 
 The full example is `examples/gtk4/animation/transitions.py`.
 
+![A stack with a switcher, and a revealer below it](images/screenshots/transitions.png){: #fig-transitions width="65%"}
+
 ## CSS {#css}
 
 GTK styles its widgets with a subset of CSS, and that subset includes transitions
@@ -120,6 +122,8 @@ applies changes live, which turns styling from a compile-and-look loop into
 something interactive.
 
 The full example is `examples/gtk4/animation/css-animation.py`.
+
+![The swatch mid-transition, after the round class was added](images/screenshots/css-animation.png){: #fig-css-animation width="55%"}
 
 ## AdwAnimation {#adw-animation}
 

@@ -121,6 +121,8 @@ app.connect("activate", on_activate)
 sys.exit(app.run(sys.argv))
 ```
 
+![The first window](images/screenshots/hello-world.png){: #fig-hello-world width="45%"}
+
 Running it opens a window with a label in it, and closing the window ends the
 program. Four things are doing work here.
 
@@ -199,6 +201,8 @@ grid.attach(Gtk.Entry(), 1, 0, 2, 1)
 ```
 
 The full example is `examples/gtk4/boxes.py`.
+
+![A column containing a row and a button](images/screenshots/boxes.png){: #fig-boxes width="55%"}
 
 ### Callbacks — reacting to program events {#callbacks}
 
@@ -296,6 +300,8 @@ destructive class for something that is merely annoying to undo.
 
 The full example is `examples/gtk4/widgets/buttons.py`.
 
+![Text, icon, icon-and-label, suggested and destructive buttons](images/screenshots/buttons.png){: #fig-buttons width="75%"}
+
 ### Toggle buttons, check buttons and radio groups {#toggles}
 
 A `Gtk.ToggleButton` stays pressed. A `Gtk.CheckButton` is the same idea drawn as a
@@ -345,6 +351,8 @@ The rule of thumb GNOME uses: a switch turns something on now, a check button
 records a choice you will confirm later with a button.
 
 The full example is `examples/gtk4/widgets/toggle-and-check.py`.
+
+![A toggle button, a check button, a radio group made of check buttons, and a switch](images/screenshots/toggle-and-check.png){: #fig-toggles width="50%"}
 
 ### Labels {#labels}
 
@@ -418,6 +426,8 @@ will grow until it pushes everything else off the window.
 
 The full example is `examples/gtk4/widgets/entries.py`.
 
+![An entry, a password entry, a search entry and a text view](images/screenshots/entries.png){: #fig-entries width="60%"}
+
 ### Numbers: spin buttons and scales {#numbers}
 
 ```python
@@ -460,6 +470,8 @@ backed by a list model and a factory, the same machinery that drives list views.
 That is [More GTK 4](03-more-gtk4.html).
 
 The full example is `examples/gtk4/widgets/numbers-and-choices.py`.
+
+![A spin button, a scale and a drop down](images/screenshots/numbers-and-choices.png){: #fig-numbers width="55%"}
 
 ### Menus and actions {#menus}
 
@@ -537,6 +549,8 @@ at once. It is more ceremony than `connect("activate", ...)` for a single menu i
 and considerably less for a real application.
 
 The full example is `examples/gtk4/widgets/menus.py`.
+
+![One menu model driving both a menu bar and a header bar button](images/screenshots/menus.png){: #fig-menus width="60%"}
 
 ### Message dialogs {#message-dialogs}
 
@@ -672,6 +686,8 @@ a list model, a file being edited — a class is easier to follow than a nest of
 closures, and it is what the GNOME examples look like.
 
 The full example is `examples/gtk4/adwaita-window.py`.
+
+![The same widgets as libadwaita rows, with no hand-written spacing](images/screenshots/adwaita-window.png){: #fig-adwaita-window width="60%"}
 
 ## Summary
 

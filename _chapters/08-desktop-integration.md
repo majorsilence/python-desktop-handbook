@@ -169,6 +169,8 @@ overrides it.
 
 The full example is `examples/gtk4/desktop/settings.py`.
 
+![Widgets bound to GSettings keys, remembered between runs](images/screenshots/settings.png){: #fig-settings width="55%"}
+
 ## Where files go {#xdg-directories}
 
 Settings cover preferences. For everything else there are the XDG base

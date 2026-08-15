@@ -171,6 +171,8 @@ stutter. Compute in advance, draw from the result.
 
 The full example is `examples/gtk4/cairo/drawing-area.py`.
 
+![Cairo drawing inside a Gtk.DrawingArea](images/screenshots/drawing-area.png){: #fig-drawing-area width="50%"}
+
 ## Paths {#paths}
 
 Everything Cairo draws is a path: a sequence of lines and curves, which you then
@@ -448,6 +450,8 @@ redraws every frame, or when it must stay sharp on a scaled display. For a chart
 Cairo is less code and no slower in practice.
 
 The full example is `examples/gtk4/cairo/snapshot-widget.py`.
+
+![A widget drawn from render nodes rather than with Cairo](images/screenshots/snapshot-widget.png){: #fig-snapshot-widget width="55%"}
 
 ## Summary
 

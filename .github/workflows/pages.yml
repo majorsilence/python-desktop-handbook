@@ -31,6 +31,7 @@ jobs:
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gir1.2-secret-1 \
             gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            libgtk-4-media-gstreamer \
             libglib2.0-bin gettext \
             xvfb dbus-x11
           pip install PySide6
@@ -47,6 +48,18 @@ jobs:
           WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
         # A session bus, because some examples own a name on it.
         run: dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
+
+      - name: Take the screenshots
+        env:
+          GTK_A11Y: none
+          GSK_RENDERER: cairo
+          WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
+        # Stronger than the smoke test: this only passes if a window actually
+        # mapped and rendered. The images are committed, so this is a check
+        # rather than a build step.
+        run: |
+          dbus-run-session -- xvfb-run -a python3 tools/make-screenshots.py
+          git diff --stat -- images/screenshots || true
 
       - name: Build, validate and install the packaging example
         run: |
