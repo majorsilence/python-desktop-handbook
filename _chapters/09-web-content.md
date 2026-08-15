@@ -5,562 +5,279 @@ number: 9
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/web/`. They are run
+> on each build, so if one of them stops working the build says so.
 
 ## Introduction
 
-This chapter is going to explore how a PyGTK application can have the web embedded into them. It will cover using the firefox engine gecko, webkit, and Internet Explorer.
+The previous edition of this book explained how to embed Mozilla with
+`gtkmozembed`, and how to put an Internet Explorer control in a GTK window on
+Windows. Both are gone, and have been for a long time. What is left is
+**WebKitGTK**, and it is in much better shape than either of them ever was: a
+current browser engine, multi-process, sandboxed, maintained alongside Safari's,
+and packaged by every distribution.
 
-## gtkmozembed
-
-Using gtkmozemebed to embed mozilla firefox inside a PyGTK application is the easiest of the options in this chapter. A browser is initialized and added to the PyGTK window.
-
-What is needed to start off with is to import the needed python modules.
-
-```python
-import gtk
-import gtkmozembed
-```
-
-Along with the browser the application will probably want some buttons to control how the web pages. Included will be a back, forward, refresh, stop, go, and home button. Also there will be a address bar. These will be connect to methods to control their actions.
-
-Web Browser PyGTK Init Method
-
-```python
-class ExampleBrowser(object):
-  def __init__(self):
-    data =
-    """
-<html><head><title>Hello</title></head> <body> PyGTK using MozEmbed to embed a web browser. </body> </html>
-    """
-    win = gtk.Window()
-    win.set_size_request(800, 600)
-    win.connect("delete_event", lambda w,e: gtk.main_quit())
-
-    vbox = gtk.VBox(False, 0)
-    control_box = gtk.HBox(False, 0)
-
-    back = gtk.Button("Back")
-    forward = gtk.Button("Forward")
-    refresh = gtk.Button("Refresh")
-    stop = gtk.Button("Stop")
-    home = gtk.Button("Home")
-    # no limit on address length
-    self.address = gtk.Entry(max=0)
-    go = gtk.Button("Go")
-
-    control_box.pack_start(back, True, True, 2)
-    control_box.pack_start(forward, True, True, 2)
-    control_box.pack_start(refresh, True, True, 2)
-    control_box.pack_start(stop, True, True, 2)
-    control_box.pack_start(home, True, True, 2)
-    control_box.pack_start(self.address, True, True, 2)
-    control_box.pack_start(go, True, True, 2)
-
-    back.connect("clicked", self.on_back_clicked, None)
-    forward.connect("clicked", self.on_forward_clicked, None)
-    refresh.connect("clicked", self.on_refresh_clicked, None)
-    stop.connect("clicked", self.on_stop_clicked, None)
-    home.connect("clicked", self.on_home_clicked, data)
-    self.address.connect("key_press_event", self.on_address_keypress)
-    go.connect("clicked", self.on_go_clicked, None)
-
-    vbox.pack_start(control_box, False, True, 2) self.browser = gtkmozembed.MozEmbed()
-    #gtkmozembed.set_profile_path("/tmp", "foobar")
-    vbox.add(self.browser)
-
-    win.add(vbox)
-    win.show_all()
-    ## self.browser.load_url('http://www.pygtk.org')
-    self.browser.render_data(data, long(len(data)), 'file:///', 'text/html')
-    # Load file from file system
-    #self.browser.load_url('file:///path/to/file/name.html')
-```
-
-This code creates a PyGTK window and creates a control box, adds some buttons to the control box and then adds it to the window.
-
-The import part to see though is the gtkmozembed part.
-
-```python
-self.browser = gtkmozembed.MozEmbed()
-self.browser.render_data(data, long(len(data)), 'file:///', 'text/html')
-```
-
-This small piece of code initializes the web browser and leaves the an instance with the name self.browser. It then displays the message, "PyGTK using MozEmbed to embed a web browser".
-
-With newly created browser it is now possible to access all the methods that are available such as going forward, backward, and entering addresses.
-
-Mozilla Callback Methods
-
-```python
-def on_back_clicked(self, widget=None, data=None):
-  print "Back button clicked."
-  if self.browser.can_go_back():
-    self.browser.go_back()
-
-def on_forward_clicked(self, widget=None, data=None):
-  print "Forward button clicked."
-  if self.browser.can_go_forward():
-    self.browser.go_forward()
-
-def on_refresh_clicked(self, widget=None, data=None):
-  print "Refresh button clicked."
-  self.browser.reload(gtkmozembed.FLAG_RELOADNORMAL)
-
-def on_stop_clicked(self, widget=None, data=None):
-  print "Stop Button Clicked."
-  self.browser.stop_load()
-
-def on_home_clicked(self, widget=None, data=None):
-  print "Home Button clicked."
-  print "Back button only works on actual pages and not render_data"
-  self.browser.render_data(data, long(len(data)), 'file:///', 'text/html')
-
-def on_go_clicked(self, widget=None, data=None):
-  print "Go Button Clicked."
-  self.browser.load_url(self.address.get_text())
-```
-
-These methods should be self explanatory. For example there is the on\_back\_clicked method which checks if the browser is able to go back to a previous page with:
-
-```python
-self.browser.can_go_back()
-```
-
-If it passes this check, meaning there is a page to go back to, it goes back to the previous page with the following code:
-
-```python
-self.browser.go_back()
-```
-
-As can be seen with each of the signaled methods, they are just like the on\_back\_clicked methods. They are very easy to use and not much else to that.
-
-### Running a PyGTK Mozembed Application
-
-This section is very important if the gtkmozembed application is *seg faulting*. Depending on which operating system mozembed is being used on it may very well give a *segmentation fault*. This can be very frustrating to deal with if the reason is not known. However since I have run into this problem several times myself on a couple of systems I can give a few hints.
-
-Basically the problem is that some mozilla libraries that are needed cannot be found by the application, so to run the app it needs to be started with a shell script instead of just running the python script.
-
-#### Ubuntu Gutsy
-
-To use gtkmozembed on Ubuntu Gutsy, the path variables LD\_LIBRARY\_PATH and MOZILLA\_FIVE\_HOME must be set. So what should done is create a shell script. For example, create with a shell script with the name mozilla\_embed\_start.sh and put the following code inside:
-
-gtkmozembed Run Script (Gutsy)
+You would embed it for three reasons: to show documentation or a preview inside
+your application, to render content that is genuinely HTML — an email, a
+Markdown preview, a report — or to build an application whose interface is HTML
+and whose logic is Python.
 
 ```bash
-#!/bin/bash
-export LD_LIBRARY_PATH=/usr/lib/firefox
-export LD_MOZILLA_FIVE_HOME=/usr/lib/firefox
-python your_gtkmozembed_application.py
+# Debian, Ubuntu
+sudo apt install gir1.2-webkit-6.0
+
+# Fedora
+sudo dnf install webkitgtk6.0
 ```
 
-Now run this code in the same directory as `your_gtkmozembed_application.py` file and it should run with no segmentation fault.
-
-#### Ubuntu Feisty, Edgy, and Dapper
-
-On Ubuntu Feisty, Edgy, and Dapper the path variable LD\_LIBRARY\_PATH must be set to the firefox library directory.
-
-A shell script must also be created just like for Ubuntu Gutsy.
-
-gtkmozembed Script (Feisty, Edgy, Dapper)
-
-```bash
-#!/bin/bash
-export LD_LIBRARY_PATH=/usr/lib/firefox
-python your_gtkmozembed_application.py
-```
-
-Now run this shell script in the same directory as your gtkmozembed application and it should now be running without any segmentation faults.
-
-#### Other Distributions
-
-If you are running a different distribution of Linux or maybe a BSD the variables that need to be set may be different or the path to the firefox libraries may be different.
-
-From here you are on your own. I suggest you try one of the Ubuntu solutions as one of them will probably work as long as you put in the correct firefox library path.
-
-## Internet Explorer
-
-Using Internet Explorer with PyGTK is an interesting exercise that took me quite of bit of web searching before finding how to do this. Because this is not something that I need often I will be using a somewhat modified sample found on a mailing list[^1] .
-
-Just to be clear this is for Microsoft Windows only. In fact the only reason I am writing this here is so I do not forget myself. I once spent several hours creating a custom application for a specific purpose that had the ability to preview output html internally for ease of use. Then only to find out that gtkmozembed is not for windows. But I needed it to run on windows and linux. So here is how I got Internet Explorer to work on windows with PyGTK.
-
-To start, the comtypes package will need to be installed and can be found at: <http://sourceforge.net/projects/comtypes/>. Also pywin32 should be installed.
-
-Once this has been installed Internet explorer can be taken advantage of. First start off by importing the required modules and creating the required ctypes variables.
+### Get the version right {#version}
 
 ```python
-import win32con
-from ctypes import *
-from ctypes.wintypes import *
-from comtypes import IUnknown
-from comtypes.automation import IDispatch, VARIANT
-from comtypes.client import wrap
-
-kernel32 = windll.kernel32
-user32 = windll.user32
-atl = windll.atl
+gi.require_version("WebKit", "6.0")
+from gi.repository import WebKit
 ```
 
-Of course PyGTK will need to be imported like any other GTK application.
+This trips up everyone once, because there are three namespaces in circulation:
+
+| Namespace | Toolkit | Status |
+| --- | --- | --- |
+| `WebKit 6.0` | GTK 4 | what you want |
+| `WebKit2 4.1` | GTK 3 | the previous generation |
+| `WebKit2 4.0` | GTK 3, libsoup 2 | end of life |
+
+Most tutorials and most Stack Overflow answers are `WebKit2`, and the class names
+inside are nearly identical, so code copied from one to the other looks right and
+fails at `require_version`. The API version and the library version are also not
+the same number — `WebKit 6.0` reports itself as WebKit 2.52.
+
+## A browser {#browser}
 
 ```python
-import pygtk
-pygtk.require("2.0")
-import gtk
+view = WebKit.WebView()
+view.load_uri("https://gnome.org/")
 ```
 
-Now a class will be created call GUI with an \_\_init\_\_ method with the following code to setup the window. This will basically just be like using the gtkmozembed window.
+That is a working browser widget. Everything else is chrome around it.
+
+State arrives as **properties**, so it is `notify::` again:
 
 ```python
-self.home_url = "http://www.majorsilence.com/"
-
-self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-self.win.set_title("Example Webbrowser that works on Linux and Windows") self.win.connect("destroy", gtk.main_quit)
-self.win.set_size_request(750, 550)
-self.win.realize()
-# Create a VBox to house the address bar and the IE control.
-self.main_vbox = gtk.VBox()
-
-control_box = gtk.HBox(False, 0)
-
-back = gtk.Button("Back")
-forward = gtk.Button("Forward")
-refresh = gtk.Button("Refresh")
-stop = gtk.Button("Stop")
-home = gtk.Button("Home")
-self.address = gtk.Entry(max=0)
-go = gtk.Button("Go")
-
-control_box.pack_start(back, True, True, 2)
-control_box.pack_start(forward, True, True, 2)
-control_box.pack_start(refresh, True, True, 2)
-control_box.pack_start(stop, True, True, 2)
-control_box.pack_start(home, True, True, 2)
-control_box.pack_start(self.address, True, True, 2)
-control_box.pack_start(go, True, True, 2)
-
-back.connect("clicked", self.on_backward_clicked, None)
-forward.connect("clicked", self.on_forward_clicked, None)
-refresh.connect("clicked", self.on_refresh_clicked, None)
-stop.connect("clicked", self.on_stop_clicked, None)
-home.connect("clicked", self.on_home_clicked, None)
-self.address.connect("key_press_event", self.on_address_keypress)
-go.connect("clicked", self.on_go_clicked, None)
-
-self.main_vbox.pack_start(control_box, False, True, 2)
-
-self.win.add(self.main_vbox)
-self.win.show_all()
-
-# Initialize all the Internet Explorer things
-self.init_ie()
+view.connect("notify::uri", self.on_uri_changed)
+view.connect("notify::estimated-load-progress", self.on_progress)
+view.connect("notify::title", self.on_title_changed)
 ```
 
-As can be seen with this example, the initialization function most creates a nice window to view web pages in. This is to be used with the rest of the code.
-
-At the very end of the initialization is found the method call `self.init_ie()`, this is what sets up all the Internet Explorer stuff. I will be very honest here and say I am not sure how it all works since I do not really care to much about Windows programming, but I know that it does work.
-
-So to take a look at the init\_ie method what is found is the following:
+History is not a property, though, and this is a trap worth naming.
+`can_go_back()` and `can_go_forward()` are **methods**, not properties, so
+`bind_property("can-go-back", …)` fails at runtime with "has no property called
+can-go-back". Refresh those from `load-changed` instead:
 
 ```python
-def init_ie(self):
-  # Create a DrawingArea to host IE and add it to the hbox.
-  self.container = gtk.DrawingArea()
-  self.main_vbox.add(self.container)
-  self.container.show()
-  # Make the container accept the focus and pass it to the control;
-  # this makes the Tab key pass focus to IE correctly.
-  self.container.set_property("can-focus", True)
-  self.container.connect("focus", self.on_container_focus)
-  # Resize the AtlAxWin window with its container.
-  self.container.connect("size-allocate", self.on_container_size)
-  # Create an instance of IE via AtlAxWin.
-  atl.AtlAxWinInit()
-  hInstance = kernel32.GetModuleHandleA(None)
-  parentHwnd = self.container.window.handle
-  self.atlAxWinHwnd = user32.CreateWindowExA(0, "AtlAxWin", self.home_url,
-    win32con.WS_VISIBLE | win32con.WS_CHILD | win32con.WS_HSCROLL |
-    win32con.WS_VSCROLL, 0, 0, 100, 100, parentHwnd, None, hInstance, 0)
-
-  # Get the IWebBrowser2 interface for the IE control.
-  pBrowserUnk = POINTER(IUnknown)()
-  atl.AtlAxGetControl(self.atlAxWinHwnd, byref(pBrowserUnk))
-
-  # the wrap call querys for the default interface
-  self.browser = wrap(pBrowserUnk)
-  # Create a Gtk window that refers to the native AtlAxWin window.
-  self.gtkAtlAxWin = gtk.gdk.window_foreign_new(long(self.atlAxWinHwnd))
-  # By default, clicking a GTK widget doesn't grab the focus away from
-  # a native Win32 control.
-  self.address.connect("button-press-event", self.on_widget_click)
+def on_load_changed(self, view, event):
+    self.back.set_sensitive(view.can_go_back())
+    self.forward.set_sensitive(view.can_go_forward())
+    if event == WebKit.LoadEvent.FINISHED:
+        self.progress.set_visible(False)
 ```
 
-All I can say about this is that it works. If you can figure it out good for you. Now lets focus on some of the methods that are needed to work with Internet Explorer that are connected to in the init\_ie method.
+`load-changed` reports `STARTED`, `REDIRECTED`, `COMMITTED` and `FINISHED`.
+`FINISHED` fires whether the load worked or not — a failure is `load-failed`
+first, then `FINISHED`.
 
-Here is the on\_widget\_clicked method:
+`load_uri()` wants a real URI. A bare `gnome.org` is not one, so a browser has to
+fix up what the user types:
 
 ```python
-def on_widget_click(self, widget, data):
-  control self.win.window.focus()
+if "://" not in text:
+    text = "https://" + text
 ```
 
-This method is used with Internet Explorer because on Windows, by default a GTK application does not grab control from native win32 api.
+The full example is `examples/gtk4/web/browser.py`.
 
-Next is the on\_container\_size method.
+## Deciding what the page may do {#policy}
+
+`decide-policy` fires before anything is navigated to, opened in a new window, or
+downloaded, and it is where an embedded view stops being a browser:
 
 ```python
-def on_container_size(self, widget, sizeAlloc):
-  self.gtkAtlAxWin.move_resize(0, 0, sizeAlloc.width, sizeAlloc.height)
+def on_decide_policy(self, _view, decision, decision_type):
+    if decision_type == WebKit.PolicyDecisionType.NAVIGATION_ACTION:
+        uri = decision.get_navigation_action().get_request().get_uri()
+        if not uri.startswith("https://docs.example.com/"):
+            decision.ignore()               # refuse it
+            Gtk.UriLauncher(uri=uri).launch(self, None, None)   # or hand it over
+            return True
+    decision.use()
+    return True
 ```
 
-This is used to make sure the gtk.Drawing container is properly sized[^2].
+Three answers: `use()` allows it, `ignore()` refuses it, and `download()` turns it
+into a download. You must call one of them and return `True`, or the decision is
+left hanging and the page stops.
 
-The last special method is on\_container\_focus.
+For a view that shows *your* content, this is where you keep it that way: allow
+your own origin, and send everything else to the user's real browser. A help
+viewer that will happily navigate to any link in the document is a help viewer
+that can be pointed anywhere.
+
+## Running JavaScript {#javascript}
 
 ```python
-def on_container_focus(self, widget, data):
-  rect = RECT()
-  user32.GetWindowRect(self.atlAxWinHwnd, byref(rect))
-  ieHwnd = user32.WindowFromPoint(POINT(rect.left, rect.top))
-  user32.SetFocus(ieHwnd)
+view.evaluate_javascript(
+    "document.title",
+    -1,                  # length; -1 means nul-terminated
+    None, None, None,    # world, source uri, cancellable
+    self.on_evaluated,
+)
+
+
+def on_evaluated(self, view, result, _data=None):
+    try:
+        value = view.evaluate_javascript_finish(result)
+    except GLib.Error as error:
+        return
+    print(value.to_string() if value.is_string() else value.to_json(0))
 ```
 
-Apparently this method is used to pass the focus to Internet Explorer by passing the handle of the Internet Explorer control.
+Asynchronous, like everything else, and the result is a `JSCValue` rather than a
+Python object. `is_string()`, `is_number()`, `is_array()` and friends ask what it
+is; `to_string()` and `to_json(0)` get it out. `to_json()` is the pragmatic choice
+for anything structured — take the JSON and hand it to `json.loads()`.
 
-And now are the backward, forward, stop, refresh, and home buttons.
+**Never build a script by formatting a string with user data into it.** It is
+`eval` with the same consequences it has anywhere else. Pass values in by defining
+a function in the page and calling it with `JSON.stringify`-safe arguments, or by
+setting them through the message channel below.
+
+## Letting the page call back {#script-messages}
+
+The other direction is a script message handler. Register a name, and it appears
+in the page as `window.webkit.messageHandlers.<name>`:
 
 ```python
-def on_backward_clicked(self, widget=None, data=None):
-  try:
-    self.browser.GoBack()
-  except:
-    pass # No page to go back to
+manager = WebKit.UserContentManager()
+manager.register_script_message_handler("fromPage", None)
+manager.connect("script-message-received::fromPage", self.on_message)
 
-def on_forward_clicked(self, widget=None, data=None):
-  try:
-    self.browser.GoForward()
-  except:
-    pass
-
-def on_refresh_clicked(self, widget=None, data=None):
-  self.browser.Refresh()
-
-def on_stop_clicked(self, widget=None, data=None):
-  self.browser.Stop()
-
-def on_home_clicked(self, widget=None, data=None):
-  #self.browser.GoHome()
+view = WebKit.WebView(user_content_manager=manager)
 ```
 
-When using the GoBack and GoForward methods they must be used with error handling or they will will crash the program. The Refresh method is used to refresh, the Stop method is used to stop ad GoHome is used to go to the browsers home page.
-
-The on\_go\_clicked method takes the address entered in the address bar and loads that page.
+```javascript
+window.webkit.messageHandlers.fromPage.postMessage(
+    JSON.stringify({clicks: count})
+);
+```
 
 ```python
-def on_go_clicked(self, widget=None, data=None):
-  v = byref(VARIANT())
-  self.browser.Navigate(self.address.get_text(), v, v, v, v)
+def on_message(self, _manager, message):
+    payload = message.to_string()       # a JSCValue again
 ```
 
-Loading the page that is in the address uses the Navigate method, pass in the address, then a variant to the rest[^3].
+The content manager has to be attached **when the view is created** — it is a
+construct-only property, so creating the view first and adding the manager
+afterwards silently does nothing.
 
-And finally the on\_address\_keypress method. This is the last method to be used with the Internet Explorer example. All this method does is watch for the Enter to be pressed and then calls the on\_go\_clicked method.
-
-## Mozilla and IE Example
-
-This section will show an example of how to use Internet Explorer or Mozilla as the engine depending on the operating system that is being used.
-
-Mozilla and Internet Explorer
+`UserContentManager` also injects scripts and stylesheets into every page a view
+loads:
 
 ```python
-"""
-Embedding IE in pygtk via AtlAxWin and ctypes.
-"""
-# needs the comtypes package from http://sourceforge.net/projects/comtypes/
-import sys
-import pygtk
-pygtk.require("2.0")
-import gtk
-
-if sys.platform=="win32":
-    import win32con
-    from ctypes import *
-    from ctypes.wintypes
-    import * from comtypes
-    import IUnknown from comtypes.automation
-    import IDispatch, VARIANT from comtypes.client
-    import wrap
-    kernel32 = windll.kernel32
-    user32 = windll.user32
-    atl = windll.atl
-else:
-    import gtkmozembed
-
-class GUI:
-    def __init__(self):
-        self.home_url = "http://www.majorsilence.com/"
-
-        self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win.set_title("Example Web browser that works on Linux and Windows")
-        self.win.connect("destroy", gtk.main_quit) self.win.set_size_request(750, 550)
-        self.win.realize()
-
-        self.main_vbox = gtk.VBox()
-
-        control_box = gtk.HBox(False, 0)
-        back = gtk.Button("Back")
-        forward = gtk.Button("Forward")
-        refresh = gtk.Button("Refresh")
-        stop = gtk.Button("Stop")
-        home = gtk.Button("Home")
-        self.address = gtk.Entry(max=0) # no limit on address length
-        go = gtk.Button("Go")
-
-        control_box.pack_start(back, True, True, 2)
-        control_box.pack_start(forward, True, True, 2)
-        control_box.pack_start(refresh, True, True, 2)
-        control_box.pack_start(stop, True, True, 2)
-        control_box.pack_start(home, True, True, 2)
-        control_box.pack_start(self.address, True, True, 2)
-        control_box.pack_start(go, True, True, 2)
-
-        back.connect("clicked", self.on_backward_clicked, None)
-        forward.connect("clicked", self.on_forward_clicked, None)
-        refresh.connect("clicked", self.on_refresh_clicked, None)
-        stop.connect("clicked", self.on_stop_clicked, None)
-        home.connect("clicked", self.on_home_clicked, None)
-        self.address.connect("key_press_event", self.on_address_keypress)
-        go.connect("clicked", self.on_go_clicked, None)
-
-        self.main_vbox.pack_start(control_box, False, True, 2)
-
-        self.win.add(self.main_vbox)
-        self.win.show_all()
-
-        if sys.platform=="win32":
-            self.init_ie()
-        else:
-            self.init_mozilla()
-
-    def init_ie(self):
-        # Create a DrawingArea to host IE and add it to the hbox.
-        self.container = gtk.DrawingArea()
-        self.main_vbox.add(self.container)
-        self.container.show()
-
-        # Make the container accept the focus and pass it to the control;
-        # this makes the Tab key pass focus to IE correctly.
-        self.container.set_property("can-focus", True)
-        self.container.connect("focus", self.on_container_focus)
-
-        # Resize the AtlAxWin window with its container.
-        self.container.connect("size-allocate", self.on_container_size)
-
-        # Create an instance of IE via AtlAxWin.
-        atl.AtlAxWinInit()
-        hInstance = kernel32.GetModuleHandleA(None)
-        parentHwnd = self.container.window.handle
-        self.atlAxWinHwnd = user32.CreateWindowExA(0, "AtlAxWin", self.home_url,
-            win32con.WS_VISIBLE | win32con.WS_CHILD | win32con.WS_HSCROLL |
-            win32con.WS_VSCROLL, 0, 0, 100, 100, parentHwnd, None, hInstance, 0)
-
-        # Get the IWebBrowser2 interface for the IE control.
-        pBrowserUnk = POINTER(IUnknown)()
-        atl.AtlAxGetControl(self.atlAxWinHwnd, byref(pBrowserUnk))
-
-        # the wrap call queries for the default interface
-        self.browser = wrap(pBrowserUnk)
-
-        # Create a Gtk window that refers to the native AtlAxWin window.
-        self.gtkAtlAxWin = gtk.gdk.window_foreign_new(long(self.atlAxWinHwnd))
-
-        # By default, clicking a GTK widget doesn't grab the focus away from
-        # a native Win32 control.
-        self.address.connect("button-press-event", self.on_widget_click)
-
-    def init_mozilla(self):
-        self.browser = gtkmozembed.MozEmbed()
-        self.main_vbox.add(self.browser)
-        self.browser.load_url(self.home_url)
-
-    def on_backward_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            try:
-                self.browser.GoBack()
-            except:
-                pass # No page to go back to
-        else:
-            if self.browser.can_go_back():
-                self.browser.go_back()
-
-    def on_forward_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            try:
-                self.browser.GoForward()
-            except:
-                pass
-        else:
-            if self.browser.can_go_forward():
-                self.browser.go_forward()
-
-    def on_refresh_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            self.browser.Refresh()
-        else:
-            self.browser.reload(gtkmozembed.FLAG_RELOADNORMAL)
-
-    def on_stop_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            self.browser.Stop()
-        else:
-            self.browser.stop_load()
-
-    def on_home_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            # To go to Internet explorer's default home page use:
-            #self.browser.GoHome()
-            v = byref(VARIANT())
-            self.browser.Navigate(self.home_url, v, v, v, v)
-        else:
-            self.browser.load_url(self.home_url)
-
-    def on_go_clicked(self, widget=None, data=None):
-        if sys.platform=="win32":
-            v = byref(VARIANT())
-            self.browser.Navigate(self.address.get_text(), v, v, v, v)
-            #print dir(self.browser)
-        else:
-            self.browser.load_url(self.address.get_text())
-
-    def on_address_keypress(self, widget, event):
-        if gtk.gdk.keyval_name(event.keyval) == "Return":
-            print "Key press: Return"
-            self.on_go_clicked(None)
-
-    def on_widget_click(self, widget, data):
-        # used on win32 platform because by default a gtk application does
-        # not grab control from native win32 control
-        self.win.window.focus()
-
-    def on_container_size(self, widget, sizeAlloc):
-        self.gtkAtlAxWin.move_resize(0, 0, sizeAlloc.width, sizeAlloc.height)
-
-    def on_container_focus(self, widget, data):
-        # Used on win32 with Internet Explorer
-        # Pass the focus to IE. First get the HWND of the IE control; this
-        # is a bit of a hack but I couldn't make IWebBrowser2._get_HWND work.
-        rect = RECT()
-        user32.GetWindowRect(self.atlAxWinHwnd, byref(rect))
-        ieHwnd = user32.WindowFromPoint(POINT(rect.left, rect.top))
-        user32.SetFocus(ieHwnd)
-
-if "__name__" == "__main__":
-    gui = GUI()
-    gtk.main()
+manager.add_script(WebKit.UserScript.new(
+    "console.log('injected before the page runs');",
+    WebKit.UserContentInjectedFrames.TOP_FRAME,
+    WebKit.UserScriptInjectionTime.START,
+    None, None,
+))
 ```
 
-[^1]: Mailing list found at at: <http://www.mail-archive.com/comtypes-users@lists.sourceforge.net/msg00084.html> and a direct link to the code found is: <http://www.mail-archive.com/comtypes-users@lists.sourceforge.net/msg00084/ie_in_gtk.py>
-[^2]: Well as far as I can tell.
-[^3]: I really have no idea what this does.
+`START` runs before the page's own scripts, which is where you set up an API for
+the page to use. `END` runs after the document is parsed, which is where you
+modify what is there.
+
+The full example is `examples/gtk4/web/javascript-bridge.py`, which does both
+directions.
+
+### Treat the page as untrusted {#bridge-security}
+
+A message handler is a hole through the sandbox that you made on purpose. Once a
+page can call `postMessage`, anything that ends up in that page can call it — an
+advert, an injected script, a compromised CDN, a link the user followed.
+
+So: only expose handlers to content you control, validate every payload as if it
+came off the network, keep handlers narrow and specific (`save_document`, not
+`run_command`), and never accept a file path from the page and act on it without
+checking. Combine it with `decide-policy` so the view cannot navigate somewhere
+you did not intend in the first place.
+
+## Loading your own HTML {#load-html}
+
+```python
+view.load_html(PAGE, "file:///")
+```
+
+The second argument is the **base URI**, and leaving it `None` causes puzzling
+failures later: the page is treated as having no origin, so relative URLs do not
+resolve and anything origin-checked — `fetch`, local storage, modules — is
+refused.
+
+For a view that shows content you ship, `Gtk.Template`-style resource loading is
+the usual approach: put the HTML, CSS and images in a GResource and register a
+custom URI scheme so the page can load them:
+
+```python
+session = view.get_network_session()
+session.get_website_data_manager()      # cookies, cache, storage all live here
+```
+
+`WebKit.NetworkSession` is where cookies, the cache and website data live in
+WebKit 6.0. An **ephemeral** session — `WebKit.NetworkSession.new_ephemeral()` —
+keeps nothing on disk, which is what you want for a preview pane or anything
+private.
+
+## Settings worth changing {#settings}
+
+```python
+settings = view.get_settings()
+settings.set_enable_developer_extras(True)          # right-click, Inspect
+settings.set_enable_write_console_messages_to_stdout(True)
+settings.set_enable_javascript(False)               # for a preview pane
+settings.set_user_agent_with_application_details("MyApp", "1.0")
+```
+
+The developer tools are the same Web Inspector Safari uses, and having them in
+your own application while debugging a bridge is worth the one line.
+
+## The sandbox {#webkit-sandbox}
+
+WebKitGTK runs the web content in a separate, sandboxed process, using bubblewrap
+and user namespaces. That is a feature and occasionally an obstacle: in a
+container without permission to create namespaces, the web process cannot start
+and the view dies with
+
+```text
+bwrap: Creating new namespace failed: Operation not permitted
+```
+
+The fix in a container is to allow user namespaces. There *is* an environment
+variable that turns the sandbox off, and its name —
+`WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS` — is the documentation. It is
+acceptable in a throwaway test container, which is how the examples in this
+chapter are checked on machines that cannot do namespaces. It is not acceptable
+anywhere a real page will be loaded.
+
+## Summary
+
+- `gi.require_version("WebKit", "6.0")` for GTK 4. `WebKit2` is the GTK 3 one, and
+  is what most of the search results are about.
+- `WebKit.WebView()` plus `load_uri()` is a browser; the rest is chrome.
+- Load state is properties and `load-changed`, but `can_go_back()` is a method —
+  there is nothing to bind to.
+- `decide-policy` is where you keep an embedded view from wandering. Answer with
+  `use()`, `ignore()` or `download()` and return `True`.
+- `evaluate_javascript()` is asynchronous and returns a `JSCValue`; `to_json(0)`
+  is the practical way out.
+- A script message handler is how the page calls you. Attach the
+  `UserContentManager` when you create the view, and treat everything that comes
+  through it as untrusted input.
+- `load_html()` needs a base URI or the page has no origin.
+
+[Internationalization](10-internationalization.html) is next.
