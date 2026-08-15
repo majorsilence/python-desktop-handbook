@@ -5,430 +5,392 @@ number: 7
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/dbus/`. They are run
+> on each build, under a private session bus, so the client and the service in the
+> last two sections are known to talk to each other.
 
 ## Introduction
 
-DBus is used for interprocess communication between applications. Simply put this means that applications can retrieve information from one another by accessing special methods that are provided by DBus.
+D-Bus is how programs on a Linux desktop talk to each other. Your music player
+tells the shell what is playing; the shell asks your application to open a file;
+your program asks the desktop to show a notification, unlock a keyring or pick a
+file on its behalf. Almost everything in
+[Desktop Integration](05-desktop-integration.html) is D-Bus with a wrapper over it.
 
-ObjectPath
-: An application may export an object to represent itself or different parts of itself. For example Rhythmbox exports an object representing the Play List and an object representing the current playing song. Eg. /org/gnome/Rhythmbox/Player
+There are two buses:
 
-<a id="des-objectpath-an-application"></a>
+The **session bus**
+: one per logged-in session, for the programs a user is running. This is where
+  nearly everything in this chapter happens.
 
-BusName
-: The name of the application as exposed through DBus. Eg. org.gnome.Rhythmbox
+The **system bus**
+: one per machine, for services that outlive a login — NetworkManager, systemd,
+  UPower. Reading from it is usually allowed; changing things needs
+  authorisation through polkit.
 
-<a id="des-busname-the-name"></a>
-
-Interface
-: Is used to access methods through DBus. Eg. org.gnome.Rhythmbox
-
-<a id="des-interface-is-used"></a>
-
-This chapters purpose is to show how to control other applications with DBus and how to add DBus to your PyGTK applications so that you can expose functionality of your applications to others.
-
-## Controlling Applications {#sec-dbus-controlling-applications}
-
-First off is going to be an example of how to use dbus to communicate with another application. This example will communicate with the rhythmbox music player. The reason for using rhythmbox is because it is it is rather ubiquitous in the gnome distro world.
-
-```python
-#!/usr/bin/env python
-import os, gobject, dbus
-from dbus.mainloop.glib import DBusGMainLoop
-import gtk
-```
-
-The above code imports the needed code to work with this example. What is needed to work with DBus is the *dbus* module and *DBusGMainLoop*. The dbus module is used for the common dbus interactions while DBusGMainLoop is used to work with gobject main loops, which PyGTK uses.
-
-Here the class DBusExample is created with the \_\_init\_\_ method setting up the dbus.
+Use **GDBus**, which is part of GLib and therefore already imported. The old
+`dbus-python` module still exists and still appears in search results; it has its
+own main loop integration, its own type system and its own pitfalls, and there is
+no reason to start with it now.
 
 ```python
-class DBusExample(object):
-  def __init__(self):
-    # Do before session or system bus is created.
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    self.bus = dbus.SessionBus()
+from gi.repository import Gio, GLib
 
-    self.proxy_object = self.bus.get_object('org.gnome.Rhythmbox',
-        '/org/gnome/Rhythmbox/Player')
-    self.player = dbus.Interface(self.proxy_object,
-        'org.gnome.Rhythmbox.Player')
-
-    self.bus.add_signal_receiver(self.on_song_changed,
-        dbus_interface="org.gnome.Rhythmbox.Player",
-        signal_name="playingUriChanged")
-
-    self.init_gui()
-    self.list_available_commands()
+connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 ```
 
-To begin with a DBus SessionBus is created. This allows connecting to other applications. If this example were connecting to a system process it would use a SystemBus. Once the bus is created, a proxy object is assigned to self.proxy\_object using the self.bus.get\_object method. The get\_object method takes as arguments the applications Bus Name([Introduction](07-dbus.html#des-busname-the-name)) and Object Path([Introduction](07-dbus.html#des-objectpath-an-application)).
+## The vocabulary {#vocabulary}
 
-After the proxy\_object has been created it is used to create an interface to the available methods. The interface self.player is created using the dbus.Interface class. It is initlized with the self.proxy\_object and using the org.gnome.Rhythmbox.Player interface. This interface provides for methods to control and retrieve information on the currently playing song.
+Five words, and then everything else is detail:
 
-Below this a signal handler is created on the bus to catch the playingUriChanged Signal from the interface org.gnome.Rhythmbox.Player and call the on\_song\_changed method.
+A **bus name** identifies a connection. Well-known names look like
+`org.gnome.Shell`; unique names look like `:1.42` and are handed out by the bus.
 
-Lastly in the \_\_init\_\_ method the init\_gui method is called. The init\_gui method is rather insignificant as it creates a small gui with a few buttons. However the callback methods for those buttons use the self.player interface to control rhythmbox.
+An **object path** looks like a file path: `/org/gnome/Shell`. One program can
+export many objects.
+
+An **interface** is a named group of members: `org.freedesktop.DBus.Properties`.
+One object can implement several.
+
+**Methods** are calls with a reply. **Signals** are broadcasts with no reply.
+**Properties** are values, read and written through a standard interface.
+
+**Signatures** describe types: `s` string, `i` int32, `u` uint32, `b` boolean,
+`d` double, `o` object path, `v` variant, `as` array of strings, `a{sv}` a
+dictionary from string to variant — the shape almost every "options" argument has.
+`(is)` is a struct.
+
+## Looking before you write {#exploring}
+
+Do not start by writing code. Start by looking at what is on the bus, with
+`gdbus`, `busctl` or the D-Spy application:
+
+```bash
+gdbus introspect --session --dest org.freedesktop.Notifications \
+  --object-path /org/freedesktop/Notifications
+
+busctl --user list
+```
+
+The same three moves in Python are listing the names, introspecting an object, and
+calling a method:
 
 ```python
-  def init_gui(self):
-    win = gtk.Window()
-    win.connect("delete_event", lambda w,e:gtk.main_quit())
-    vbox = gtk.VBox()
-    hbox = gtk.HBox()
-
-    self.output = gtk.Label("")
-    vbox.pack_start(self.output, False, True, 0)
-    mute=gtk.Button("Mute")
-    play_pause=gtk.Button("Play/Pause")
-    previous=gtk.Button("Previous")
-    next=gtk.Button("Next")
-
-    mute.connect("clicked", self.on_mute_clicked)
-    play_pause.connect("clicked", self.on_play_pause_clicked)
-    previous.connect("clicked", self.on_previous_clicked)
-    next.connect("clicked", self.on_next_clicked)
-
-    hbox.pack_start(mute, False, True, 0)
-    hbox.pack_start(play_pause, False, True, 0)
-    hbox.pack_start(previous, False, True, 0)
-    hbox.pack_start(next, False, True, 0)
-    vbox.pack_start(hbox, False, True, 0)
-    win.add(vbox)
-    win.show_all()
+reply = connection.call_sync(
+    "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+    "ListNames", None,
+    GLib.VariantType("(as)"),          # the reply signature you expect
+    Gio.DBusCallFlags.NONE, -1, None,
+)
+(names,) = reply.unpack()
 ```
 
-The init\_gui method above creates a small user interface with a play/pause, mute, previous and next button to control rhythmbox. It also as a label that is used by the on\_song\_changed callback method, that was specified in the \_\_init\_\_ method, to display the path and name of the current playing song.
+That `(names,)` is not a typo. **A D-Bus reply is always a tuple**, even when it
+carries one value, so unpacking one result means unpacking a one-element tuple.
+Forgetting it gives you a tuple where you expected a list, and the error appears
+somewhere else entirely.
+
+`Gio.DBusNodeInfo.new_for_xml()` turns the introspection XML into objects, which
+is how the graphical tools build their trees:
 
 ```python
-  def on_mute_clicked(self, widget):
-    if self.player.getMute():
-      self.player.setMute(False)
-    else:
-      self.player.setMute(True)
+info = Gio.DBusNodeInfo.new_for_xml(xml)
+for interface in info.interfaces:
+    for method in interface.methods:
+        print(method.name, [a.signature for a in method.in_args])
 ```
 
-The on\_mute\_clicked method checks to see if rhythmbox is muted, if it is it will unmute it. If it is not muted it will set it to mute. This is accomplished using the self.player interface with the setMute method, which takes a boolean argument.
+The full example is `examples/gtk4/dbus/explore-the-bus.py`.
+
+## Calling a service {#proxies}
+
+`call_sync()` is fine for one call. For an object you use repeatedly, a
+**proxy** is much better: it fetches the introspection data, caches the
+properties, and turns method calls into ordinary Python calls.
 
 ```python
-  def on_play_pause_clicked(self, widget):
-    if self.player.getPlaying():
-      self.player.playPause(False)
-    else:
-      self.player.playPause(True)
+proxy = Gio.DBusProxy.new_for_bus_sync(
+    Gio.BusType.SESSION,
+    Gio.DBusProxyFlags.NONE,
+    None,                      # introspection data; None means fetch it
+    "com.example.Counter",     # bus name
+    "/com/example/Counter",    # object path
+    "com.example.Counter",     # interface
+    None,
+)
+
+print(proxy.Increment("(i)", 3))     # method name, signature, arguments
+print(proxy.Describe())
 ```
 
-The on\_play\_pause\_clicked method will set rhythmbox to play if it is paused and pause it if it is playing. This is accomplished using the self.player interface with the playPause method, which takes a boolean argument.
+That `"(i)"` is the signature of the **arguments**, and it is required because
+Python cannot tell an int32 from an int64 from a uint32. Get it wrong and the call
+fails with a type error rather than silently sending the wrong thing.
+
+Two things about proxies surprise people:
+
+**Creating a proxy succeeds even when nobody is there.** It is a placeholder that
+starts working when the service appears. To find out whether anything is home:
 
 ```python
-  def on_previous_clicked(self, widget):
-    self.player.previous()
+if proxy.get_name_owner() is None:
+    print("not running")
 ```
 
-The on\_previous\_clicked method will set rhythmbox to play the previous played song. This is accomplished using the self.player interface with the previous method.
+**Properties are cached, and the cache is only as fresh as the last
+`PropertiesChanged` signal.**
 
 ```python
-  def on_next_clicked(self, widget):
-    self.player.next()
+proxy.get_cached_property("Value").unpack()
 ```
 
-The on\_next\_clicked method will set rhythmbox to play the next song. This is accomplished using the self.player interface with the next method.
+costs nothing because the value arrived with the proxy — but if the service
+changes it without announcing it, you will read the old value forever. This cuts
+both ways: when you *write* a service, emit `PropertiesChanged`, and when you use
+one that does not, call `Get` explicitly instead of trusting the cache.
+
+### Calling asynchronously {#async-calls}
+
+`call_sync()` and the proxy's attribute-style calls block until the reply comes
+back, and the default timeout is 25 seconds. In a program with a window that is 25
+seconds of frozen interface. Anything triggered by a user action should be
+asynchronous:
 
 ```python
-  def on_song_changed(self, data):
-    path, filename = os.path.split(self.player.getPlayingUri())
-    self.output.set_text("Path: " + path + "\nFilename: " + filename)
+def on_reset(proxy, result, _data=None):
+    try:
+        proxy.call_finish(result)
+    except GLib.Error as error:
+        print(f"failed: {error.message}")
+
+proxy.call("Reset", None, Gio.DBusCallFlags.NONE, -1, None, on_reset)
 ```
 
-The on\_song\_changed method is called when the playingUriChanged signal is emitted. It retrieves the current songs current uri, splitting it into a path and file name, and displays it using a gtk label. It should also be pointed out that instead of using the getPlayUri() method, the data argument could be used as it is the uri of the current song as well.
+Same shape as every other asynchronous call in this book: a callback, a
+`*_finish()` inside a `try`, and `GLib.Error` for the failure. A D-Bus call can
+fail because the service is not running, because it returned an error, because it
+took too long, or because you were not allowed — all of them arrive here.
 
-And last lets not forget the small amount of code to run this example
+The full example is `examples/gtk4/dbus/call-our-service.py`.
+
+## Listening {#signals}
+
+A proxy re-emits its object's signals as `g-signal`:
 
 ```python
-if __name__ == "__main__":
-  app = DBusExample()
-  gtk.main()
+proxy.connect("g-signal", lambda p, sender, signal, params: print(signal, params.unpack()))
+proxy.connect("g-properties-changed", on_properties_changed)
 ```
 
-## Adding DBus to your Applications
-
-Controlling other applications using DBus is one thing but it is not enough if you application needs to allow others to control it. To let other applications have access to your program requires explosing methods of sub class of dbus.service.Object.
-
-### Creating a DBus Service {#sub-dbus-creating-a-dbus-service}
-
-To start off a few modlues need to be imported. The import ones are the DBus ones.
+When you want to hear about something that is not tied to one object — or from a
+program that is not running yet — subscribe on the connection:
 
 ```python
-#!/usr/bin/env python
-import os, gobject, dbus, dbus.service
-from dbus.mainloop.glibimport DBusGMainLoop
-import gtk
-
-output_label = None
+subscription = connection.signal_subscribe(
+    None,                            # sender
+    "org.freedesktop.DBus",          # interface
+    "NameOwnerChanged",              # signal
+    "/org/freedesktop/DBus",         # path
+    None,                            # first argument must equal this
+    Gio.DBusSignalFlags.NONE,
+    on_name_owner_changed,
+)
 ```
 
-So of the above modules dbus, dbus.service and DBusGMainLoop are what are important for allowing other applications to connect to his one. After the imports there is the output\_label which will be used as a global to create a gtk.Label to display messages that are received through DBus.
+Any filter may be `None`, meaning "do not care", but the more of them you fill in
+the less traffic the bus sends you. `NameOwnerChanged` in particular fires
+constantly on a busy session.
 
-After this DBusObject class is created; it can be named whatever you want as long as it subclasses dbus.service.Object. As you will see it is not necessary to create \_\_init\_\_ method with this class as the parent classes can be used.
+For the common case — "tell me when this service comes and goes" — there is a
+helper that also handles the case where it is *already* running, which a plain
+subscription does not:
 
 ```python
-class DBusObject(dbus.service.Object):
-  # Display and message to gtk label and return message to caller
-  @dbus.service.method('com.majorsilence.MessageInterface',
-      in_signature='', out_signature='s')
-  def display_welcome_message(self):
-    global output_label
-    output_label.set_text("Welcome to dbus.")
-    return "Welcome to dbus."
+watch = Gio.bus_watch_name(
+    Gio.BusType.SESSION, "com.example.Counter",
+    Gio.BusNameWatcherFlags.NONE, on_appeared, on_vanished,
+)
 ```
 
-To expose methods for the @dbus.service.method decorator is used, specifying the DBus Interface that the method will available on and the methods in (arguments) and out (return value) signatures. Here the interface is specified as com.majorsilence.MessageInterface, so any application calling this method would have to use com.majorsilence.MessageInterface. After the decorator declare the method as normal. The method name is the same name that will be exposed.
+Keep the ids and undo both when you are finished:
+`connection.signal_unsubscribe(subscription)` and
+`Gio.bus_unwatch_name(watch)`.
 
-So what we end up with here is a method called display\_welcome\_message that returns a string, s meaning it is a dbus.String type (see [Types](07-dbus.html#sec-dbus-types)). As can be seen it sets the label to "Welcome to dbus" and returns the same message to the calling program.
+The full example is `examples/gtk4/dbus/watch-signals.py`.
 
-Moving on to the next method, it takes a string as an argument emits a signal and completion and returns nothing.
+## Being a service {#exporting}
 
-```python
-# Set gtk label to the message that is passed
-  @dbus.service.method(dbus_interface='com.majorsilence.MessageInterface', in_signature='s', out_signature='')
-  def set_message(self, s):
-    global output_label
-    if not isinstance(s, dbus.String):
-      print "not string"
-      return
-    output_label.set_text(s)
-    #emit signal
-    self.message_signal()
-```
+Exporting your own object is three things: own a name, describe an interface, and
+answer calls.
 
-As before and like all exposed DBus methods the @dbus.service.method decorator is used. This method has the same DBus Interface as the first method, com.majorsilence.MessageInterface, and an in\_signature of s meaning a dbus.String (see [Types](07-dbus.html#sec-dbus-types)).
-
-The method is set\_message, it takes as an argument a string. It checks to make sure it was passed a string, if it was it will set the label to the string that was passed in. The interesting thing about this method compared to the first one is that it emits a signal on completion. It does this by calling the self.message\_signal() method as its last act.
-
-The self.message\_signal is the method that is described next. It to uses a dbus decorator, but instead of using the @dbus.service.method decorator, it uses the @dbus.service.signal decorator. What this means is that when this method is called it will emit a signal that can be caught using the add\_signal\_receiver method that was described in [Controlling Applications](07-dbus.html#sec-dbus-controlling-applications).
-
-```python
-  @dbus.service.signal('com.majorsilence.MessageInterface')
-  def message_signal(self):
-    return
-```
-
-As can be seen the message\_signal method uses the @dbus.service.signal decorator and specifies the com.majorsilence.MessageInterface. If it is to include data with its signal it should also have a out\_signature specifying the correct type.
-
-All that is left is the the main() function that is used to setup a very small PyGTK GUI and create the neccesary DBus initiation.
-
-```python
-def main():
-  # Create GTK Gui
-  global output_label
-  win = gtk.Window()
-  win.connect("delete_event", lambda w,e:gtk.main_quit())
-  output_label = gtk.Label("This message will change through using dbus.")
-  win.add(output_label)
-  win.show_all()
-
-  # Start DBus Service
-  dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-  session_bus = dbus.SessionBus()
-  name = dbus.service.BusName("com.majorsilence.MessageService", session_bus)
-  object = DBusObject(session_bus, "/TestObject")
-
-  gtk.main()
-```
-
-The important part of the code starts after the # Start DBus Service comment. These four lines of code are what makes available dbus and makes it possible to expose method of the application to any other DBus capable program. First DBus must be set to use the glib gobject main loop (the same that PyGTK uses), without this it will not work. Next it creates a session bus that allows applications to connect to a bus. After this it uses the session bus to create a bus name using the dbus.service.BusName class. It takes as arguements the session bus that was created and the interface com.majorsilence.MessageService.
-
-Finally the object is create calling the DBusObject class that we have created, using the session bus that we have created and using the /TestObject object path.
-
-```python
-if __name__ == "__main__":
-  main()
-```
-
-Of course do not forget to call the main function that runs the the example PyGTK DBus service application.
-
-### Connecting to your DBus Service {#sub-dbus-connecting-to-your-dbus-service}
-
-Controlling your own application through DBus is very similiar to how the first example controlled Rhythmbox. This is a small application that will call the two exposed methods from [Creating a DBus Service](07-dbus.html#sub-dbus-creating-a-dbus-service) and handle the signal that is emitted.
-
-```python
-#!/usr/bin/env python
-import os, gobject,dbus
-from dbus.mainloop.glib import DBusGMainLoop
-import gtk
-
-class DBusClient(object):
-  def __init__(self):
-    # Do before session or system bus is created.
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    self.bus = dbus.SessionBus()
-    self.proxy = self.bus.get_object('com.majorsilence.MessageService',
-        '/TestObject')
-    self.control_interface = dbus.Interface(self.proxy,
-        'com.majorsilence.MessageInterface')
-    self.bus.add_signal_receiver(self.on_message_recieved,
-        dbus_interface="com.majorsilence.MessageInterface",
-        signal_name="message_signal")
-```
-
-As can be seen, connect to the bus name com.majorsilence.MessageSerive using the objec path /TestObject. Next the interface is created using self.proxy and the interface com.majorsilence.MessageInterface. Finally the signal message\_signal is handled by connecting it to the self.on\_message\_recieved method when it is emitted from the com.majorsilence.MessageInterface interface.
-
-```python
-    win = gtk.Window()
-    win.connect("delete_event", lambda w,e:gtk.main_quit())
-    vbox = gtk.VBox()
-    hbox = gtk.HBox()
-
-    self.text_message=gtk.Entry()
-    set_message=gtk.Button("Set Message")
-    display_message=gtk.Button("Display Welcome Message")
-    set_message.connect("clicked", self.on_set_message_clicked)
-
-    display_message.connect("clicked",
-        self.on_display_message_clicked)
-
-    hbox.pack_start(set_message, False, True, 0)
-    hbox.pack_start(display_message, False, True, 0)
-    vbox.pack_start(self.text_message, False, True, 0)
-    vbox.pack_start(hbox, False, True, 0)
-    win.add(vbox)
-    win.show_all()
-
-  def on_message_recieved(self):
-    print "message_signal caught"
-```
-
-When the signal is emitted it does nothing prints a message to the console.
-
-```python
-  def on_set_message_clicked(self, widget):
-    message = self.text_message.get_text()
-    self.control_interface.set_message(message)
-```
-
-When the set message button is clicked it grabs the text from the text entry and uses the self.control\_interface to set the label in the serve appliction to whatever text was typed in.
-
-```python
-  def on_display_message_clicked(self, widget):
-    print self.control_interface.display_welcome_message()
-```
-
-When the display message button is clicked it calls the exposed method display\_welcome\_message() which is a method with a predfined message that is displayed to the DBus service applications label.
-
-```python
-if __name__ == "__main__":
-  app = DBusClient()
-  gtk.main()
-```
-
-The code to to actually run the example.
-
-## Finding Exposed Methods {#sec-dbus-finding-exposed-methods}
-
-Now you are asking yourself "it is all good and well that I can access functionalty throught DBus, but how do I find what is available?". Well this is actionally fairly simple and is accomplished using introspection. Basically form is
-
-```python
-your_interface.Introspect(dbus_interface='org.freedesktop.DBus.Introspectable')
-  def list_available_commands(self):
-```
-
-Here is an example using rhythmbox. It lists all the available methods, signals and properties of the interface that is used. It is printed as xml as that is the form that DBus uses.
-
-```python
-import gobject, dbus
-from dbus.mainloop.glib import DBusGMainLoop
-
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-bus = dbus.SessionBus()
-proxy_object = bus.get_object('org.gnome.Rhythmbox',
-    '/org/gnome/Rhythmbox/Player')
-player = dbus.Interface(proxy_object,
-    'org.gnome.Rhythmbox.Player')
-print player.Introspect(dbus_interface=
-        'org.freedesktop.DBus.Introspectable')
-```
-
-That is all that is to it, very simple, very easy.
-
-## Types {#sec-dbus-types}
-
-When using introspection a print out of the xml will be displayed, for instance a piece of it may look like this.
+Describe the interface in the same XML that `Introspect` returns:
 
 ```xml
-<method name="playPause">
-  <arg name="arg0" type="b" direction="in"/>
-</method>
+<node>
+  <interface name="com.example.Counter">
+    <method name="Increment">
+      <arg type="i" name="by" direction="in"/>
+      <arg type="i" name="value" direction="out"/>
+    </method>
+    <method name="Reset"/>
+    <signal name="Changed">
+      <arg type="i" name="value"/>
+    </signal>
+    <property name="Value" type="i" access="read"/>
+    <property name="Label" type="s" access="readwrite"/>
+  </interface>
+</node>
 ```
 
-What this small piece means is that there is a method that is available called *playPause*. It takes one argument. Its type is b meaning it is a boolean. The direction is in, meaning it recieves input, if the direction is out is returns a value.
+Register an object with one callback per job:
 
-It is important to know what the different types are so here is a list.
+```python
+node = Gio.DBusNodeInfo.new_for_xml(INTERFACE_XML)
+connection.register_object(
+    PATH, node.interfaces[0],
+    counter.on_method_call, counter.on_get_property, counter.on_set_property,
+)
+```
 
-b
-: dbus.Boolean, bool
+The method handler dispatches on the name:
 
-d
-: dbus.Double, float
+```python
+def on_method_call(self, _connection, _sender, _path, _interface,
+                   method, parameters, invocation):
+    if method == "Increment":
+        (by,) = parameters.unpack()
+        self.value += by
+        invocation.return_value(GLib.Variant("(i)", (self.value,)))
+    elif method == "Reset":
+        self.value = 0
+        invocation.return_value(None)
+    else:
+        invocation.return_error_literal(
+            Gio.dbus_error_quark(), Gio.DBusError.UNKNOWN_METHOD,
+            f"no such method: {method}",
+        )
+```
 
-g
-: dbus.Signature
+**Always answer the invocation**, on every path through the handler, including the
+ones you did not expect. A caller that gets no reply does not get an error — it
+waits for its timeout and then gets a confusing one. `return_value(None)` is the
+reply for a method that returns nothing, and it is not optional.
 
-i
-: dbus.Int32, int
+The reply is a GVariant **tuple** again, so a method returning one integer returns
+`GLib.Variant("(i)", (value,))`.
 
-n
-: dbus.Int16
+Signals are emitted on the connection:
 
-o
-: dbus.ObjectPath
+```python
+connection.emit_signal(
+    None, PATH, NAME, "Changed", GLib.Variant("(i)", (self.value,))
+)
+```
 
-q
-: dbus.UInt16
+And when a property changes, say so — nothing does it for you:
 
-s
-: dbus.String, dbus.UTF8String, str, unicode
+```python
+connection.emit_signal(
+    None, PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged",
+    GLib.Variant("(sa{sv}as)", (NAME, {"Value": GLib.Variant("i", value)}, [])),
+)
+```
 
-t
-: dbus.UInt64
+Leave that out and every client's cached copy stays at whatever it was when they
+connected. The three parts of the payload are the interface, the properties whose
+new values you are sending, and a list of properties that changed but whose values
+you are not sending.
 
-u
-: dbus.UInt32
+### Owning the name {#owning-a-name}
 
-x
-: dbus.Int64, long
+You can call `Gio.bus_own_name()` directly, but if your program is a
+`Gio.Application` — or a `Gtk.Application` — it already owns a name: the
+application id **is** the bus name.
 
-y
-: dbus.Byte
+```python
+app = Gio.Application(application_id="com.example.Counter",
+                      flags=Gio.ApplicationFlags.IS_SERVICE)
+app.connect("startup", on_startup)          # register the object here
+```
 
-DBus also supports for container types.
+`app.get_dbus_connection()` gives you the connection to register on.
+`IS_SERVICE` means the process exists to serve, and `set_inactivity_timeout()`
+lets it exit when nothing has called it for a while — combined with a
+`.service` file, that is how a service gets started on demand rather than at login.
 
-ax dbus.Array, list
-: a is an array and the x is the type that is used. X here means it is an array of dbus.UInt64/long
+There is a bonus you get without asking. Every `Gio.Action` you add to a
+`Gtk.Application` is already exported over D-Bus, on the standard
+`org.gtk.Actions` interface. Which means this works against any GTK application,
+with no code on your side at all:
 
-ay dbus.ByteArray, str
-: Is a more effienct array
+```bash
+gdbus call --session --dest com.example.App --object-path /com/example/App \
+  --method org.gtk.Actions.Activate quit "[]" "{}"
+```
 
-(types) dbus.Struct, tuple
-: The signature of is either None or a string representing the contents of the struct. The signature '(iis)' would be used for two integers and a string.
+That is also how the shell shows your application's menu, and how a desktop file
+with `DBusActivatable=true` gets you started.
 
-a{xy} dbus.Dictionary, dict
-: a is the key and y is the value. So a{si} would be a dictionary with strings for keys and integers for values.
+The full example is `examples/gtk4/dbus/export-a-service.py`.
 
-v
-: variants
+## Testing without a desktop {#testing}
+
+D-Bus code is easy to test, because a bus is cheap:
+
+```bash
+dbus-run-session -- python3 my-service.py
+dbus-run-session -- sh -c "python3 export-a-service.py & sleep 1; python3 call-our-service.py"
+```
+
+`dbus-run-session` starts a private session bus, runs the command with
+`DBUS_SESSION_BUS_ADDRESS` pointing at it, and tears it down afterwards. Nothing
+else on the machine can see it, so tests cannot collide, and it is how the
+examples in this chapter are verified on each build.
+
+## Portals are D-Bus {#portals}
+
+The portals from the desktop integration chapter are ordinary D-Bus services on
+`org.freedesktop.portal.Desktop` at `/org/freedesktop/portal/desktop`, and
+anything without a GTK wrapper is reachable the way anything else is.
+
+They have one unusual convention. A portal method does not return the answer; it
+returns an **object path for a request**, and the answer arrives later as a
+`Response` signal on that object. That is because a portal call may involve asking
+the user, which can take as long as the user takes. So the sequence is: subscribe
+to the response path, make the call, and wait for the signal.
+
+This is exactly the sort of thing worth using a library for.
+[libportal](https://github.com/flatpak/libportal) wraps every portal in a normal
+asynchronous API and has GObject introspection, so it is `Xdp` in PyGObject:
+
+```python
+gi.require_version("Xdp", "1.0")
+from gi.repository import Xdp
+
+portal = Xdp.Portal.new()
+portal.request_background(parent, "Syncing in the background", None,
+                          Xdp.BackgroundFlags.AUTOSTART, None, on_done)
+```
+
+Screenshots, screen casting, location, inhibiting suspend, autostart, opening a
+URI, and the trash all live there.
 
 ## Summary
 
-Although you are probably not a DBus expert from this chapter, it should have given you a good enough understanding to start accessing other applications and add some basic support to your own application. What you need to do is experiment a little and make sure that you fully understand DBus and maybe read up on it a little more.
+- Use GDBus from GLib, not `dbus-python`.
+- Session bus for the user's programs, system bus for the machine's.
+- Every reply is a tuple: `(value,) = reply.unpack()`.
+- Method arguments need an explicit signature, because Python's ints do not have
+  one.
+- A proxy exists even when the service does not; check `get_name_owner()`.
+- Cached properties are only as fresh as the last `PropertiesChanged` — emit it
+  from your services, and do not trust it from services that do not.
+- Use the asynchronous calls in anything with a window. The default timeout is 25
+  seconds.
+- In a method handler, answer the invocation on every path, including the
+  unexpected ones.
+- A `Gtk.Application`'s id is already a bus name, and its actions are already
+  exported.
+- `dbus-run-session` gives you a private bus for testing.
 
-Some other resources that you may want to check out are:
-
-- <http://dbus.freedesktop.org/doc/dbus-python/doc/tutorial.html>
-- <http://dbus.freedesktop.org/doc/dbus-python/>
-- <http://dbus.freedesktop.org/doc/dbus-python/api/index.html>
-- <http://www-128.ibm.com/developerworks/linux/library/l-dbus.html>
-- <http://www.madsoft.org/2008/06/10/interfacing-banshee-10-with-dbus-and-python/>
-- <http://mumble.sourceforge.net/DBus>
+[Animation and Transitions](08-animation.html) is next.

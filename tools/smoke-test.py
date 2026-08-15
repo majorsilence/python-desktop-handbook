@@ -15,9 +15,10 @@ Usage::
     python3 tools/smoke-test.py examples/gtk4                 # every .py below a path
     python3 tools/smoke-test.py examples/gtk4/hello-world.py  # or named files
 
-Needs a display.  Under CI, or on a headless machine, wrap it::
+Needs a display, and a session bus for the examples that own a name on one.
+Under CI, or on a headless machine, wrap it::
 
-    xvfb-run -a python3 tools/smoke-test.py examples/gtk4
+    dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
 """
 
 from __future__ import annotations

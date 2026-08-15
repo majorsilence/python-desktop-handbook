@@ -31,7 +31,7 @@ jobs:
             gir1.2-gtk-4.0 gir1.2-adw-1 \
             gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            xvfb
+            xvfb dbus-x11
           pip install PySide6
 
       - name: Start every example and shut it down again
@@ -39,7 +39,8 @@ jobs:
           GTK_A11Y: none
           GSK_RENDERER: cairo
           QT_QPA_PLATFORM: offscreen
-        run: xvfb-run -a python3 tools/smoke-test.py examples/gtk4
+        # A session bus, because some examples own a name on it.
+        run: dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
 
   pdf:
     name: Build PDF
