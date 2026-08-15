@@ -205,6 +205,8 @@ For a full example of how to hook up audio and video to a PyGTK application plea
 
 This example will be referred to in following sections and when adding things such as seeking and will be expanded upon in the file example at the end of the chapter.
 
+<a id="simple-video-player-example"></a>
+
 ```python
 #!/usr/bin/env python
 import pygst

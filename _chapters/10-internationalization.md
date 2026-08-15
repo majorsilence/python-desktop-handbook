@@ -92,7 +92,9 @@ This of course would output de.po.
 
 Finally the .po files must be edited and the localized language put into their proper places. Just make sure that when the .po files are created that the *charset* is set to *utf-8*.
 
-```po
+<a id="translations-po-translations-example"></a>
+
+```text
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
@@ -134,9 +136,7 @@ msgstr ""
 
 Now what you need to do is edit the .po files so that the empty msgstr have the translated text. So what this means is that:
 
-<a id="translations-po-translations-example"></a>
-
-```po
+```text
 #: translation-example.py:20
 msgid "Hello "
 msgstr ""
@@ -144,7 +144,7 @@ msgstr ""
 
 Would become in German:
 
-```po
+```text
 #: translation-example.py:20
 msgid "Hello "
 msgstr "Guten Tag"
@@ -174,9 +174,7 @@ It should be noted that on some systems that the .UTF-8 part is not needed.
 
 Translating a project that makes use of a glade file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)).
 
-<a id="fig-translations-glade-translation-project"></a>
-
-![Glade Translation Project](images/translations/translations-example.png){: width="40%"}
+![Glade Translation Project](images/translations/translations-example.png){: #fig-translations-glade-translation-project width="40%"}
 
 ```python
 import pygtk

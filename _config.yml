@@ -23,6 +23,7 @@ defaults:
       type: chapters
     values:
       layout: chapter
+      toc: true   # jekyll-toc only builds a TOC for pages that opt in
 
 markdown: kramdown
 kramdown:

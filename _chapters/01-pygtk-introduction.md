@@ -367,9 +367,7 @@ Here are some methods available with gtk.Entry:
 
 ### Menus {#sub-widgets-menus}
 
-<a id="fig-menu"></a>
-
-![File Menu Screenshot](images/pygtk-introduction/menu-screenshot.png)
+![File Menu Screenshot](images/pygtk-introduction/menu-screenshot.png){: #fig-menu}
 
 This section will cover adding menus to applications that most everyone should be used to. The standard menus such File -> Save, File -> Quit, and Help -> About. Of course after reading this section you will be more than capable to add what ever menu you wish.
 
@@ -443,9 +441,7 @@ def about_callback(widget=None):
 
 ### Message Dialogs {#sub-widgets-messagedialog}
 
-<a id="fig-messagedialog"></a>
-
-![MessageDialog Example](images/pygtk-introduction/MessageDialog-screenshot.png)
+![MessageDialog Example](images/pygtk-introduction/MessageDialog-screenshot.png){: #fig-messagedialog}
 
 Message Dialogs are small windows that are smiple and easy to use. Using them is as simple as calling the gtk.MessageDialog class. The default constructor of this class looks like this.
 
@@ -530,9 +526,7 @@ As can be seen the message dialog is easy to use and it makes it simple to displ
 
 ### Spin Buttons {#sub-widgets-spinbutton}
 
-<a id="fig-widgets-spinbutton-screenshot"></a>
-
-![SpinButton Screenshot](images/pygtk-introduction/spinbutton-screenshot.png)
+![SpinButton Screenshot](images/pygtk-introduction/spinbutton-screenshot.png){: #fig-widgets-spinbutton-screenshot}
 
 To create a spin button the gtk.SpinButton class is used.
 
@@ -672,9 +666,7 @@ if __name__ == "__main__":
 
 The status bar will break from using the user interface supplied at the beggining of this widget section, as it will use a slightly modified version so that it will now be used within a class. The example will use the same basic code but will now be within the StatusbarTest class that will be created. The only reason for this is because the author (thats me) does not like using global variables for no particular reason, I just do not like doing it unless it is a constant variable.
 
-<a id="fig-statusbar-example"></a>
-
-![Statusbar Example](images/pygtk-introduction/statusbar-screenshot.png)
+![Statusbar Example](images/pygtk-introduction/statusbar-screenshot.png){: #fig-statusbar-example}
 
 Now that the user interface is within a class it is easy to work with multiple widgets by making them class level instance variables.
 

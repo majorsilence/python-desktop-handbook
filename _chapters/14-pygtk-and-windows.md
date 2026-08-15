@@ -39,5 +39,5 @@ if sys.platform=="win32":
 
 The other option is to do the following:
 
-1. Open the C:\GTK\share\themes\MS-Windows\gtk-2.0\gtkrc file
+1. Open the C:\\GTK\\share\\themes\\MS-Windows\\gtk-2.0\\gtkrc file
 1. And change the line "gtk-button-images = 0" to "gtk-button-images = 1"

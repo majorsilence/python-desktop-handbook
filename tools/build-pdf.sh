@@ -66,6 +66,21 @@ import sys
 out = open(sys.argv[1], "w", encoding="utf-8")
 appendix_started = False
 
+def unnumber_headings(body):
+    """Add pandoc's .unnumbered class to every heading, skipping fenced code."""
+    out, fenced = [], False
+    for line in body.split("\n"):
+        if line.startswith("```"):
+            fenced = not fenced
+        elif not fenced:
+            match = re.match(r"^(#{2,6} .*?)(?:\s*\{#([^}]*)\})?$", line)
+            if match:
+                ident = "#" + match.group(2) + " " if match.group(2) else ""
+                line = f"{match.group(1)} {{{ident}.unnumbered}}"
+        out.append(line)
+    return "\n".join(out)
+
+
 def front_matter(text):
     match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
     if not match:
@@ -83,12 +98,20 @@ for path in sorted(glob.glob("_chapters/*.md")):
     # kramdown IAL -> pandoc link attributes:  {: width="50%"}  ->  {width=50%}
     body = re.sub(r'\{:\s*([^}]*)\}',
                   lambda m: "{" + m.group(1).replace('"', "") + "}", body)
+    # Bare HTML anchors are dropped by the LaTeX writer; a bracketed span with the
+    # same id becomes a real \label that cross references can point at.
+    body = re.sub(r'<a id="([^"]+)"></a>', r"[]{#\1}", body)
     # Cross-chapter links collapse to plain anchors in a single-file PDF.
     body = re.sub(r'\]\(\d+-[a-z0-9-]+\.html#', "](#", body)
     body = re.sub(r'\]\((\d+-[a-z0-9-]+)\.html\)', r"](#\1)", body)
     # Footnotes are numbered per chapter; namespace them so one file can hold them all.
     stem = os.path.basename(path)[:-3]
     body = re.sub(r'\[\^(\w+)\]', lambda m: f"[^{stem}-{m.group(1)}]", body)
+
+    # An unnumbered chapter's sections should not be numbered either, but no heading
+    # attribute syntax is read by both kramdown and pandoc, so apply it here.
+    if meta.get("unnumbered") == "true":
+        body = unnumber_headings(body)
 
     if meta.get("appendix") == "true" and not appendix_started:
         appendix_started = True
@@ -143,10 +166,11 @@ EOF
 echo "building $output with $engine ..."
 pandoc \
   "$work/meta.yaml" "$book" \
-  --from=markdown+definition_lists+footnotes+link_attributes+raw_attribute+smart \
+  --from=markdown+definition_lists+footnotes+link_attributes+raw_attribute+smart-raw_tex \
   --to=pdf \
   --pdf-engine="$engine" \
   --top-level-division=chapter \
+  --number-sections \
   --resource-path="$repo_root" \
   --highlight-style=tango \
   --output="$output"

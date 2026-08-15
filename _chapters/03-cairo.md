@@ -54,9 +54,7 @@ Using the contexts `line_to` method will draw a line from the current position, 
 
 See figure [Two Straight Lines](03-cairo.html#fig-cairo-two-striaght-lines) to see what the output should look like.
 
-<a id="fig-cairo-two-striaght-lines"></a>
-
-![Two Straight Lines](images/cairo/cairo-draw-line1.png){: width="50%"}
+![Two Straight Lines](images/cairo/cairo-draw-line1.png){: #fig-cairo-two-striaght-lines width="50%"}
 
 ### Cairo Surface Format
 
@@ -276,9 +274,7 @@ Antialias
 
 But what does this mean? Basically nothing if a straight line is being drawn. However if a curve or arc is being drawn it will look distorted or jagged, not very smooth at all. However with antialiasing turned on it will look smooth by setting the color correctly around the edges. The best way to understand this is to view an image. Take a look at figure [Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](03-cairo.html#fig-cairo-antialias-example) and see if you can tell the difference.
 
-<a id="fig-cairo-antialias-example"></a>
-
-![Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](images/cairo/cairo-antialias.png)
+![Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](images/cairo/cairo-antialias.png){: #fig-cairo-antialias-example}
 
 Now the question is why would you want to turn off antialiasing? I cannot think of to many reasons, but one that I can think of is for the program DeVeDe. It is a GUI application that uses a few command line applications to create DVDs from video files.
 
@@ -370,9 +366,7 @@ close\_path
 
 ## Cairo and PyGTK {#sec-cairo-cairo-and-pygtk}
 
-<a id="fig-cairo-pygtk-cairo-custom-widget"></a>
-
-![Custom PyGTK widget with Cairo](images/cairo/cairo-gtk-screenshot.png){: width="70%"}
+![Custom PyGTK widget with Cairo](images/cairo/cairo-gtk-screenshot.png){: #fig-cairo-pygtk-cairo-custom-widget width="70%"}
 
 Cairo can be used with PyGTK by creating a custom widget. The custom widget discussed here will extend the gtk.DrawingArea class and override[^2] the expose\_event signal callback method; `do_expose_event`.
 

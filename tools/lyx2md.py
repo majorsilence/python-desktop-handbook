@@ -202,7 +202,7 @@ class LyxParser:
             # Inside listings, character styles are meaningless.
             return "\\" if cmd == "\\backslash" else ""
         if cmd == "\\backslash":
-            return "\\"
+            return "\\\\"  # escaped, so Markdown does not read C:\GTK as a command
         if cmd.startswith("\\emph"):
             return EMPH
         if cmd.startswith("\\shape"):
@@ -454,13 +454,13 @@ def guess_language(code: str) -> str:
     if re.search(r"^\s*\[(Desktop Entry|[A-Za-z ]+)\]\s*$", sample, re.M):
         return "ini"
     if re.search(r"\b(msgid|msgstr)\b", sample):
-        return "po"
+        return "text"  # gettext catalogues; neither Rouge nor skylighting name this "po"
     if re.search(r"^\s*(sudo|apt-get|apt|yum|cd|ls|cp|mv|chmod|mkdir|rm|\./|msgfmt|"
                  r"xgettext|intltool-\w+|make|gcc|export|source|pkg-config|\$)\b",
                  low, re.M):
         return "bash"
     if re.search(r"^\s*(using |namespace )|\bpublic static void\b|\bConsole\.", sample):
-        return "csharp"
+        return "cs"
     return "python"
 
 
@@ -517,9 +517,7 @@ def split_chapters(blocks: list) -> list[Chapter]:
 
 def render_chapter(chapter: Chapter, labels: dict[str, tuple[str, str]]) -> str:
     out: list[str] = []
-    pending_label: str | None = None
     code_buffer: list[str] = []
-    prev_style = ""
 
     def flush_code() -> None:
         nonlocal code_buffer
@@ -548,7 +546,6 @@ def render_chapter(chapter: Chapter, labels: dict[str, tuple[str, str]]) -> str:
         para = block
         if para.style == "LyX-Code":
             code_buffer.append(para.text.rstrip())
-            prev_style = para.style
             continue
         flush_code()
 
@@ -557,14 +554,12 @@ def render_chapter(chapter: Chapter, labels: dict[str, tuple[str, str]]) -> str:
 
         if style in HEADING_STYLES:
             level = HEADING_STYLES[style]
+            # `{#id}` is the one attribute form both kramdown and pandoc read on a
+            # heading; kramdown rejects a `{: ...}` IAL there.
             anchor = f" {{#{slugify(para.label)}}}" if para.label else ""
             out.append(f"{'#' * level} {unescape_heading(text)}{anchor}\n")
-            pending_label = None
         elif style in LIST_STYLES:
-            marker = LIST_STYLES[style]
-            out.append(f"{marker} {text}")
-            if prev_style not in LIST_STYLES:
-                pass
+            out.append(f"{LIST_STYLES[style]} {text}")
         elif style in DEF_STYLES:
             term, rest = split_definition(text)
             # A label with no body (the stock-icon tables) is really just a list item.
@@ -575,20 +570,13 @@ def render_chapter(chapter: Chapter, labels: dict[str, tuple[str, str]]) -> str:
             out.append(f"*{text}*\n")
         elif style in ("Title", "Author"):
             continue
-        elif not text.strip():
-            if para.label:
-                pending_label = para.label
-        else:
+        elif text.strip():
             out.append(text + "\n")
 
-        if para.label and style not in HEADING_STYLES and text.strip():
+        # A label that could not be folded into a heading becomes a plain anchor,
+        # positioned exactly where LyX had it.
+        if para.label and style not in HEADING_STYLES:
             out.append(f'<a id="{slugify(para.label)}"></a>\n')
-
-        # A label-only paragraph right after a heading belongs to that heading; the
-        # two-pass label index already recorded it, so emit a plain anchor here.
-        if pending_label and (text.strip() or para is chapter.blocks[-1]):
-            out.append(f'<a id="{slugify(pending_label)}"></a>\n')
-            pending_label = None
 
         for child in para.children:
             if isinstance(child, Figure):
@@ -596,12 +584,8 @@ def render_chapter(chapter: Chapter, labels: dict[str, tuple[str, str]]) -> str:
             elif isinstance(child, QuoteBlock):
                 out.append("\n".join(f"> {p.text}" for p in child.paras) + "\n")
 
-        prev_style = para.style
 
     flush_code()
-    if pending_label:
-        out.append(f'<a id="{slugify(pending_label)}"></a>\n')
-
     body = join_blocks(out)
     if chapter.footnotes:
         body += "\n" + "\n".join(
@@ -646,11 +630,13 @@ def render_figure(fig: Figure) -> str:
     caption = fig.caption or ""
     caption = caption.replace(r"\_", "_")
     # kramdown inline attribute list; tools/build-pdf.sh rewrites it for pandoc.
-    attrs = ""
+    attrs = []
+    if fig.label:
+        attrs.append(f"#{slugify(fig.label)}")
     if fig.scale and fig.scale != 100:
-        attrs = f'{{: width="{fig.scale}%"}}'
-    anchor = f'<a id="{slugify(fig.label)}"></a>\n\n' if fig.label else ""
-    return f"{anchor}![{caption}]({fig.path}){attrs}\n"
+        attrs.append(f'width="{fig.scale}%"')
+    suffix = "{: " + " ".join(attrs) + "}" if attrs else ""
+    return f"![{caption}]({fig.path}){suffix}\n"
 
 
 def render_bibitem(text: str, labels: dict[str, tuple[str, str]]) -> str:
