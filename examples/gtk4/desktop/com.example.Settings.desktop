@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Settings Example
+GenericName=Preferences Demo
+Comment=Shows how GSettings stores preferences
+Exec=settings-example %U
+Icon=com.example.Settings
+Terminal=false
+Categories=Utility;GTK;
+Keywords=settings;preferences;example;
+StartupNotify=true
+StartupWMClass=settings-example
+DBusActivatable=true
+X-GNOME-UsesNotifications=true

@@ -5,421 +5,384 @@ number: 5
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/desktop/`. They are
+> run on each build, so if one of them stops working the build says so.
 
-## GConfig
+## Introduction
 
-Save your applications configuration file using GConfig. This example is based off the gconfig-basic-app.py file that comes with the pygtk source code, I have changed it into something I find easier to understand.
+A program that opens a window is not yet an application. It has no name in the
+launcher, no icon, nowhere to keep preferences, no way to be told to open a file,
+and no way to ask for a password without inventing its own storage. This chapter is
+about the rest of it.
 
-```python
-import gconf, gobject, gtk
+Most of what the previous edition covered here has been replaced. GConf is gone and
+GSettings took over. gnome-keyring's API is gone and libsecret took over. And a
+newer idea sits underneath all of it: **portals**. On a modern desktop your program
+may be running in a sandbox with no access to the file system, the printer, the
+camera or the network beyond what it has been granted. Portals are how it asks. The
+useful part is that GTK's own dialogs already go through them, so code written the
+normal way works sandboxed and unsandboxed without changing.
 
-class GConfigExample:
-  def __init__(self):
-    client = gconf.client_get_default()
-    client.add_dir ("/apps/pygtk-book-gconf-example-app",
-       gconf.CLIENT_PRELOAD_NONE)
-```
+## The application id {#application-id}
 
-Before even creating the gtk window, get the default gconf client, then tell the gconf client that we are interested in the given directory. This means the gconf client will receive notification of changes to this directory, and will also cache keys under this directory. To avoid getting a copy of the whole gconf database do not add "/" as that would specify the entire database. Also gconf.CLIENT\_PRELOAD\_NONE is used to avoid loading all config keys on startup. If the application reads all the config keys on startup, then preloading the cache may make sense, otherwise preload none is the way to go.
-
-After setting up the initial gconf code the gtk window is created.
-
-```python
-    self.window = gtk.Window()
-    self.window.set_title("GConfig Example")
-    vbox = gtk.VBox(False, 5)
-    self.window.add(vbox)
-```
-
-Next, the program will have eight labels that will show the database directory path as well as the value that is being stored. The method create\_configurable\_widget is used to create, display, and hook up the labels to be updated on changes to the gconf database.
+Nearly everything in this chapter keys off one string:
 
 ```python
-    config = self.create_configurable_widget(client,
-        "/apps/pygtk-book-gconf-example-app/foo")
-    vbox.pack_start(config, True, True)
-
-    config = self.create_configurable_widget(client,
-        "/apps/pygtk-book-gconf-example-app/bar")
-    vbox.pack_start(config, True, True)
-
-    config = self.create_configurable_widget(client,
-        "/apps/pygtk-book-gconf-example-app/baz")
-    vbox.pack_start (config, True, True)
-
-    config = self.create_configurable_widget(client,
-        "/apps/pygtk-book-gconf-example-app/blah")
-    vbox.pack_start(config, True, True)
-
-    self.window.connect("delete_event", lambda wid, we: gtk.main_quit())
+app = Gtk.Application(application_id="com.example.Settings")
 ```
 
-Here we use the set\_data method on the applications main window, setting the key to "client" and the value to the gconf object that was created abouve; *client*. As well a preferences button is created and added to the window. The preferences button will open a preference dialog that will edit the gconfig entries directly and does not interact at all with the GConfigExample class that shows reading from gconf.
+The id decides the name of your desktop file, the name of your icon, the D-Bus name
+you are activated on, the GSettings path convention, and which notifications are
+yours. Get it right early — changing it later means changing five other things.
+
+The rules: reverse-DNS, using a domain you actually control, matching the file names
+around it. `com.example.Settings` wants
+`com.example.Settings.desktop`, `com.example.Settings.svg` and
+`com.example.Settings.gschema.xml`. If you have no domain, GitHub-based ids like
+`io.github.username.AppName` are conventional and accepted by Flathub.
+
+## Settings {#gsettings}
+
+GConf is gone. GSettings replaced it, and the difference that matters is that
+**GSettings keys are declared in advance**. A schema states every key, its type, its
+default and what it is for. There is no writing a key that does not exist, and no
+reading one and wondering what type comes back.
+
+### The schema {#schema}
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.example.Settings" path="/com/example/Settings/">
+
+    <key name="greeting" type="s">
+      <default>'Hello'</default>
+      <summary>The word to greet with</summary>
+      <description>Shown in the entry, and remembered between runs.</description>
+    </key>
+
+    <key name="enabled" type="b">
+      <default>true</default>
+      <summary>Whether the greeting is shown at all</summary>
+    </key>
+
+    <key name="repeat" type="i">
+      <default>1</default>
+      <range min="1" max="10"/>
+      <summary>How many times to repeat the greeting</summary>
+    </key>
+
+    <key name="window-size" type="(ii)">
+      <default>(420, 280)</default>
+      <summary>The last window size</summary>
+    </key>
+
+  </schema>
+</schemalist>
+```
+
+The `type` is a **GVariant type string**: `s` string, `b` boolean, `i` int32,
+`d` double, `as` array of strings, `(ii)` a pair of int32s. String defaults need
+their own quotes inside the XML, which is the mistake everyone makes once.
+
+`<range>` is enforced — writing 20 to `repeat` fails rather than storing it. The
+summary and description are read by settings editors and by translators.
+
+The schema is compiled, not parsed at runtime:
+
+```bash
+sudo install -m 644 com.example.Settings.gschema.xml /usr/share/glib-2.0/schemas/
+sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
+```
+
+Forgetting `glib-compile-schemas` gives you a hard abort — GLib treats a missing
+schema as a programming error and calls `abort()`, so the message is
+"Settings schema 'com.example.Settings' is not installed" followed by a crash
+rather than an exception you can catch.
+
+While developing, you do not have to install anything. Compile into a temporary
+directory and load from there:
 
 ```python
-    self.window.set_data ("client", client)
-    prefs_button = gtk.Button ("Preferences")
-    vbox.pack_end (prefs_button, False, False)
-    prefs_button.connect ("clicked",   self.prefs_button_clicked_callback)
-
-    self.window.show_all()
+source = Gio.SettingsSchemaSource.new_from_directory(
+    str(compiled), Gio.SettingsSchemaSource.get_default(), False
+)
+schema = source.lookup(SCHEMA_ID, False)
+settings = Gio.Settings.new_full(schema, None, None)
 ```
 
-Once the widget monitoring notification that was created in the create\_configurable\_widget method is destroyed, the notification callback is removed.
+The example does exactly that, falling back to it when the schema is not installed,
+which is why it runs from a checkout. `GSETTINGS_SCHEMA_DIR` in the environment
+does the same thing for a program you do not want to modify.
+
+### Reading and writing {#reading-settings}
 
 ```python
-  def configurable_widget_destroy_callback(self, widget):
-    client = widget.get_data("client")
-    notify_id = widget.get_data("notify_id")
+settings = Gio.Settings.new("com.example.Settings")
 
-    if notify_id:
-      client.notify_remove (notify_id)
+greeting = settings.get_string("greeting")
+repeat = settings.get_int("repeat")
+settings.set_string("greeting", "Good morning")
+settings.reset("greeting")            # back to the schema default
 ```
 
-Here there is a notification callback for the value label widgets that monitor the current value of a gconf key, when a gconf value is changed so is the label within the program. Note that the *value* can be None (unset) or it can have the wrong type. The program needs to check to make sure it can survive *gconftool --break-key*.
+For types without a typed accessor, go through GVariant:
 
 ```python
-  def configurable_widget_config_notify(self, client, cnxn_id, entry, label):
-    if not entry.value:
-      label.set_text("")
-    elif entry.value.type == gconf.VALUE_STRING:
-      label.set_text( entry.value.to_string() )
-    else:
-      label.set_text("!type error!")
+width, height = settings.get_value("window-size").unpack()
+settings.set_value("window-size", GLib.Variant("(ii)", (800, 600)))
 ```
 
-This is the create\_configurable\_widget method that creates the labels that are displayed. Each gconf database directory will have a label to show the location as well as one label to show the value.
+Writes are queued and applied asynchronously. That is normally invisible, but a
+program that writes settings and then immediately exits should call
+`Gio.Settings.sync()` first.
+
+### Binding, which is the good part {#settings-bind}
+
+Most settings drive a widget, and for that there is no need for callbacks at all:
 
 ```python
-  def create_configurable_widget(self, client, config_key):
-    hbox = gtk.HBox(True)
-
-    key_label = gtk.Label(config_key + ": ")
-    label = gtk.Label ("")
-
-    hbox.pack_start(key_label)
-    hbox.pack_start(label)
-
-    s = client.get_string(config_key)
-
-    if s:
-      label.set_text(s)
-
-    notify_id = client.notify_add(config_key, self.configurable_widget_config_notify, label)
+settings.bind("greeting", entry, "text", Gio.SettingsBindFlags.DEFAULT)
+settings.bind("enabled", switch, "active", Gio.SettingsBindFlags.DEFAULT)
+settings.bind("repeat", spin, "value", Gio.SettingsBindFlags.DEFAULT)
 ```
 
-It should be noted here that notify\_id will be 0 if there is an error, so that is handled in the destroy callback.
+That is the whole preferences dialog: typing in the entry stores the value, and
+changing the value elsewhere updates the entry. `DEFAULT` is two-way; `GET` is
+read-only, which is how one key can also control another widget's sensitivity:
 
 ```python
-    label.set_data("notify_id", notify_id)
-    label.set_data("client", client)
-
-    label.connect("destroy", self.configurable_widget_destroy_callback)
-
-    return hbox
-
-  def prefs_button_clicked_callback(self, widget):
-    client = self.window.get_data("client")
-    prefs_dialog = EditConfigValues(client)
+settings.bind("enabled", entry, "sensitive", Gio.SettingsBindFlags.GET)
 ```
 
-Next is the code for the preference dialog. the code will be in the EditConfigValues class. It is important to know that the preference dialog will never directly edit any values in the main window, it will only edit values in the gconf database. This is to test that the program works correctly as sometimes the values will be edited using gconf-editor instead of the applications preference window.
+For anything that is not a widget property, watch the key:
 
 ```python
-class EditConfigValues:
-  def __init__(self, client):
-    self.dialog = gtk.Dialog ("GConfig Example Preferences",                              None, 0, (gtk.STOCK_CLOSE, gtk.RESPONSE_ACCEPT))
-
-    self.dialog.connect('response', lambda wid,ev: wid.destroy ())
-    self.dialog.set_default_response (gtk.RESPONSE_ACCEPT)
-
-    vbox = gtk.VBox(False, 5)
+settings.connect("changed::greeting", lambda s, key: refresh())
+settings.connect("changed", lambda s, key: refresh())      # any key
 ```
 
-Create four labels and four text entries that are used to display the gconf location as well as the current value in an entry area, this is accomplished using the create\_config\_entry method.
+Because the value changes when *anything* writes it, a program that reacts to
+`changed` rather than to its own widgets stays correct when two of its windows are
+open, when the user edits the key in dconf-editor, and when a system policy
+overrides it.
+
+The full example is `examples/gtk4/desktop/settings.py`.
+
+## Where files go {#xdg-directories}
+
+Settings cover preferences. For everything else there are the XDG base
+directories, and GLib knows all of them:
 
 ```python
-    self.dialog.vbox.pack_start(vbox)
-    entry = self.create_config_entry(client,
-        "/apps/pygtk-book-gconf-example-app/foo", True)
-    vbox.pack_start (entry, False, False)
+GLib.get_user_config_dir()     # ~/.config       — configuration you write
+GLib.get_user_data_dir()       # ~/.local/share  — data the user would miss
+GLib.get_user_cache_dir()      # ~/.cache        — safe to delete at any time
+GLib.get_user_state_dir()      # ~/.local/state  — logs, recent files, window state
+GLib.get_user_runtime_dir()    # /run/user/1000  — sockets, lock files; gone at logout
 
-    entry = self.create_config_entry(client,
-        "/apps/pygtk-book-gconf-example-app/bar")
-    vbox.pack_start (entry, False, False)
-
-    entry = self.create_config_entry (client,
-        "/apps/pygtk-book-gconf-example-app/baz")
-    vbox.pack_start (entry, False, False)
-
-    entry = self.create_config_entry (client,
-        "/apps/pygtk-book-gconf-example-app/blah")
-    vbox.pack_start (entry, False, False)
-
-    self.dialog.show_all()
+GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD)
 ```
 
-The config\_entry\_commit method does as its names says and commits changes to the gconf database. If the *text* string is zero-length it is unset, otherwise it is set.
+Put your own directory *inside* one of those, named after your application id.
+Never build a path by joining `~` with `.myapp`: the XDG environment variables move
+these directories, some distributions do move them, and inside a Flatpak they are
+redirected into the sandbox. `GLib.get_user_special_dir()` also returns the
+*translated* name, so a French user's downloads are found in
+`~/Téléchargements` without your knowing about it.
 
-```python
-  def config_entry_commit(self, entry, *args):
-    client = entry.get_data("client")
-    text = entry.get_chars(0, -1)
-    key = entry.get_data ('key')
+The distinction between cache and data is worth honouring. Anything in the cache
+directory may be deleted while your program is not running, and anything in the
+data directory gets backed up. Putting a database in the cache loses it; putting
+thumbnails in data means backing them up forever.
 
-    if text:
-      client.set_string(key, text)
-    else:
-      client.unset(key)
-```
+## Desktop files {#desktop-files}
 
-The create\_config\_entry method takes as arguments the gconf client, the config key that is to be created, as well as whether the text entry has focus. This method creates a label that shows the config key and a text entry that shows the value. Editing the text entry changes the value of the gconf value.
-
-```python
-  def create_config_entry(self, client, config_key, focus=False):
-    hbox = gtk.HBox(False, 5)
-    label = gtk.Label(config_key)
-    entry = gtk.Entry()
-
-    hbox.pack_start(label, False, False, 0)
-    hbox.pack_end(entry, False, False, 0)
-```
-
-Calling client.get\_string(config\_key) will print an error via the default error handler if the key is not set to a string.
-
-```python
-    s = client.get_string(config_key)
-    if s:
-      entry.set_text(s)
-
-    entry.set_data("client", client)
-    entry.set_data("key", config_key)
-```
-
-The changes will be commited if the user moves focus away from the text entry they are in, or if they hit enter; Changes are not commited on the *changed* signal as that would mean every new character entered would be sent, instead it waits for the user to finish first. Finally if the gconf client key is not writable the text entry is set to not writtable.
-
-```python
-    entry.connect("focus_out_event", self.config_entry_commit)
-    entry.connect ("activate", self.config_entry_commit)
-    entry.set_sensitive( client.key_is_writable(config_key) )
-    if focus:
-      entry.grab_focus()
-    return hbox
-
-if __name__ == "__main__":
-  GConfigExample()
-  gtk.main()
-```
-
-## PyGobject {#sec-pygobject}
-
-I am not going to cover very much in this section because that would be a lot, maybe in a later verion. For now this section will cover one useful function. For more information check out its documentation at <http://pygtk.org/docs/pygobject/index.html>.
-
-gobject.timeout\_add(interval,callback)
-: is a function that will call the function specified in the callback as often as is specified by the interval until the callback function returns False.
-
-Interval
-: The number of seconds between calls. Eg. 1 for one second, 100 for 100 seconds. That is pretty simple
-
-Callback
-: The function that will be called at each interval.
-
-I find this is a useful function to use when I want to periodically check to see if a long running process has finished. Another good example is lets say you have a music player with a progress bar, once a second while a song is playing you would want to update the progress bar. To do this you could setup a `gobject.timeout_add` to call an update function that checks the position of the currently playing song and update the progress bar with that information.
-
-## Gnome Menus (.desktop files)
-
-If an application is to be added to the main menu it will need an appname.desktop file with details about the application. The .desktop file will hold various information about the application including the name, how to execute it, tool tip comment, icon, category and more.
-
-### Keys
-
-The way that a .desktop file holds information is with keys. There are several keys and a few of them are required. The required keys are:
-
-- Type - Application, Link, Directory
-- Name - The name of the application and what will show up in the menu
-- Exec - The program to execute with arguments
-- URL - Only required if the entry is a Link Type
-
-There are several other keys besides the required ones. To see what is available visit the .desktop files specification web page[^1].
-
-.desktop Example
+A `.desktop` file is what puts your program in the launcher:
 
 ```ini
 [Desktop Entry]
-Version=1.0
-Encoding=UTF-8
-Name=Hello World
-GenericName=Display Hello World
-Comment=This is my first PyGTK application
-X-MultipleArgs=false
 Type=Application
-TryExec=helloworld
-Exec=helloworld
-Categories=Utility
-Icon=helloworld
+Version=1.5
+Name=Settings Example
+Comment=Shows how GSettings stores preferences
+Exec=settings-example %U
+Icon=com.example.Settings
+Terminal=false
+Categories=Utility;GTK;
+Keywords=settings;preferences;example;
+StartupNotify=true
+DBusActivatable=true
 ```
 
-Save this example as helloworld.desktop. When it is viewed with a file manger it will show up as "Hello World" because that is what the Name key is set to.
+`Name`, `Comment` and `Keywords` are shown to the user and should be translated —
+add `Name[de]=…` lines, or let your build system merge them from your `.po` files.
 
-This Example sets up a .desktop with a version of 1.0. The encoding type is UTF-8. The GenericName is a generic name to describe the application. It is assigned to the Application type. It will try to execute helloworld. The category is Utility. The utility category means that it will be placed in the Accessories category in the menu. The comment is the tooltip for the that will be displayed on hovering over it. And last the icon is set to helloworld.
+`Exec` must name something on `PATH` or give an absolute path, and it is **not** a
+shell command line: no pipes, no redirection, no quoting tricks. The `%U` is a field
+code that expands to the URIs the program was asked to open — `%F` for local file
+paths, `%u`/`%f` for a single one. A file manager passing you a document is
+`%U` at work, so leave it in even if you ignore it for now.
 
-When using Icons it must be set to the absolute path or be installed in a location that it is able to be found. This helloworld icon is a image with the name helloworld.png and can be found on the books website. Supported icon image types are png, xpm and svg.
+`Icon` should be an icon **name**, not a path — the base name of a file you
+installed into the icon theme:
 
-### Category Information
-
-Included in the keys that can be used with a .desktop file is the category key. The category is the category that the Application, Link, or Directory will be included under. If for example we have an Application and it is in the Office category; then when the main menu is opened and the office subcategory is opened the application will show up there.
-
-Here is a list of the default categories. More categories can be found on the menu specification web page[^2].
-
-- AudioVideo - A multimedia (audio/video) application
-- Audio - An audio application Desktop entry must include AudioVideo as well
-- Video - A video application Desktop entry must include AudioVideo as well
-- Development - An application for development
-- Education - Educational software
-- Game - A game
-- Graphics - Graphical application
-- Network - Network application such as a web browser
-- Office - An office type application
-- Settings - Settings applications Entries may appear in a separate menu or as part of a "Control Center"
-- System - System application, "System Tools" such as say a log viewer or network monitor
-- Utility - Small utility application, "Accessories"
-
-### Installing and Using .desktop files
-
-Creating a .desktop file without installing is pointless. It must be installed to be used. This section is going to use a small sample PyGTK application with a .desktop file to show how they work together. Then a small shell script will be created to install or uninstall the application, application data, and related .desktop file.
-
-First lets create a small python program that is the main file to create the GUI and a second python file that will only have one function that returns a small message. These two files are used to show how it can be installed and set the path in the main python file to the correct install location of the supporting python modules that are included in the application[^3].
-
-```python
-#!/usr/bin/env python
-import sys
-sys.path.append("/usr/local/lib/helloworld")
-import gtk
-import helloworld_message
-
-if __name__ == '__main__':
-  win = gtk.Window()
-  win.connect("delete_event", lambda w,e: gtk.main_quit())
-  label = gtk.Label(helloworld_message.message())
-  win.add(label)
-  win.show_all()
-  gtk.main()
+```text
+~/.local/share/icons/hicolor/scalable/apps/com.example.Settings.svg
 ```
 
-At the very top of this example sys is import and the location /usr/local/lib/helloworld is append to the system path. The reason this is done is because this is where all the applications modules will be installed. If it does not append this directory then importing the helloworld\_message module will fail.
+`Categories` decides where the entry appears in menus that still have categories,
+and the valid values are a fixed list in the freedesktop menu specification.
+Inventing one silently does nothing.
 
-The helloworld\_message.py file only contains one function and is only two lines long.
+`DBusActivatable=true` says your application id is a D-Bus name and the desktop may
+start you by activating it rather than by running `Exec`. `Gtk.Application` already
+does everything needed for this; it is what makes a second launch raise your
+existing window instead of starting a second copy.
 
-```python
-def message():
-  return ".desktop example program"
-```
-
-Now that there is a working application and a desktop file that was created above it is time to install everything. For the purposes of installing the helloworld.desktop, helloworld.py, and helloworld\_message.py files a bash shell script will be used.
-
-The shell script will take one argument that may be either --install or --uninstall. Anything other then that will display how to use this shell script. This script has been kept very simple so that it will be easy to understand.
-
-To start off lets cover the beginning of the script.
-
-```python
-#!/bin/bash
-# Get script directory path.
-scriptdir="`dirname ${0}`"
-DESTDIR="${DESTDIR:-}"
-```
-
-These first few lines set the shell script to be run by bash and set the variables "scriptdir" and "DESTDIR".
-
-Next is the installation function. This function will install the main python file as a binary and the supporting python modules and data files.
-
-```python
-install_program() # arg1=bindir, arg2=datadir, arg3=pkglibdir,
-        # arg4=pkgdatadir, arg5=pkgdocdir.
-{
-  echo ${DESTDIR}
-  # Install binary data - /usr/local/bin/helloworld
-  install -m 755 -d "${DESTDIR}${1}"
-  install -m 755 "${scriptdir}/helloworld.py" "${DESTDIR}${1}/helloworld"
-
-  # Install package library - /usr/local/lib/helloworld
-  install -m 755 -d "${DESTDIR}${3}"
-  install "${scriptdir}"/helloworld_*.py "${DESTDIR}${3}/"
-
-  # Install package data /usr/local/share/helloworld
-  #install -m 755 -d "${DESTDIR}${4}"
-  #install -m 644 "${scriptdir}/helloworld.png" "${DESTDIR}${4}/"
-
-  # Install data directory - /usr/local/share/pixmaps
-  install -m 755 -d "${DESTDIR}${2}/pixmaps"
-  install -m 644 "${scriptdir}/helloworld.png" "${DESTDIR}${2}/pixmaps/"
-
-  # /usr/local/share/applications
-  install -m 755 -d "${DESTDIR}${2}/applications"
-  install -m 644 "${scriptdir}/helloworld.desktop" \
-      "${DESTDIR}${2}/applications/"
-
-  echo "Finished Install"
-}
-```
-
-This function takes five arguments that specifiy where the binary, data, library, package data, and documentation are to be installed. It installs the helloworld.py file to /usr/local/bin/helloworld so it may be run by executing helloworld. It then install all python files that start with "helloworld\_" to the /usr/local/lib/helloworld directory. If there were any data files they would be installed to /usr/local/share/helloworld directory, but since there were none those lines are commented out(they are only using the helloworld.png file as an example).
-
-The helloworld.png file is installed to the /usr/local/share/pixmaps directory, making it usable as an icon from the helloworld.desktop file. And at the very last, helloworld.desktop is installed to the /usr/local/share/applications directory. Once this is completed the the helloworld application should show up in the menu (Applications -> Accessories -> Hello World).
-
-The next and last function in the install script is used to uninstall the helloworld application and is much smaller then the install function.
+Install into `~/.local/share/applications` for one user or
+`/usr/share/applications` for everyone, then update the caches:
 
 ```bash
-uninstall_program() # arg1=bindir, arg2=datadir, arg3=pkglibdir,
-        # arg4=pkgdatadir, arg5=pkgdocdir.
-{
-  rm -f "${DESTDIR}${1}/helloworld"
-  rm -f "${DESTDIR}${1}/helloworld.py"
-  rm -rf "${DESTDIR}${3}"
-  rm -rf "${DESTDIR}${4}"
-  rm -rf "${DESTDIR}${5}"
-  rm -f "${DESTDIR}${2}/pixmaps/helloworld.png"
-  rm -f "${DESTDIR}${2}/applications/helloworld.desktop"
-  echo "Finished Uninstall"
-}
+update-desktop-database ~/.local/share/applications
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 ```
 
-The uninstall function deletes all the files that were installed and all the directories that were created by the install function. This is very simple and there is no more to say about it.
+Skipping those is why a new entry sometimes does not appear until the next login.
+And validate the file — the parser is stricter than it looks:
 
-The last part is to read the arguments given to the shell script and call the right function.
+```bash
+desktop-file-validate ~/.local/share/applications/com.example.Settings.desktop
+```
+
+The full example is `examples/gtk4/desktop/install-desktop-file.sh`.
+
+### Notifications need one {#notifications-need-desktop-file}
+
+The notification API in [More GTK 4](02-more-gtk4.html#notifications) only works if
+an installed desktop file's basename matches the application id. Without it,
+`send_notification()` succeeds and nothing appears. This is the single most common
+"my notifications do not work" cause, and there is no error to go looking for.
+
+## Passwords {#passwords}
+
+Passwords do not belong in GSettings. GSettings values are readable by anything in
+the user's session, are synchronised by some setups and end up in backups in the
+clear.
+
+libsecret talks to the Secret Service — gnome-keyring on GNOME, KWallet on KDE:
 
 ```python
-# First arg to the script
-action=$1
-if test "$action" = --install
-then
-  echo "install selected"
-  install_program "/usr/local/bin" \
-        "/usr/local/share" \
-        "/usr/local/lib/helloworld" \
-        "/usr/local/share/helloworld" \
-        "/usr/local/share/doc/helloworld"
-elif test "$action" = --uninstall
-then
-  echo "uninstall selected"
-  uninstall_program "/usr/local/bin" \
-        "/usr/local/share" \
-        "/usr/local/lib/helloworld" \
-        "/usr/local/share/helloworld" \
-        "/usr/local/share/doc/helloworld"
-else
-  echo ""
-  echo "Usage:"
-  echo " --install - Use this argument to install"
-  echo " --uninstall - Use this argument to uninstall"
-  echo ""
-fi
+gi.require_version("Secret", "1")
+from gi.repository import Secret
+
+SCHEMA = Secret.Schema.new(
+    "com.example.Passwords",
+    Secret.SchemaFlags.NONE,
+    {"service": Secret.SchemaAttributeType.STRING,
+     "username": Secret.SchemaAttributeType.STRING},
+)
+
+Secret.password_store(
+    SCHEMA, {"service": "com.example.Passwords", "username": "alice"},
+    Secret.COLLECTION_DEFAULT,
+    "Example password for alice",     # shown in the keyring UI
+    password, None, on_stored,
+)
 ```
 
-This part of the install script reads the first argument to it and assigns it to the variable action. Then action is tested to see if it should install, uninstall, or display the accepted arguments.
+The schema here is a lookup key, not a security boundary: the attributes are what
+you search by when you want the password back. They are stored **unencrypted** —
+only the secret itself is protected — so do not put anything sensitive in an
+attribute.
 
-That is all to creating a .desktop file for use with an application.
+Every call has a synchronous and an asynchronous form, and you want the
+asynchronous one. The keyring may be locked, in which case the desktop prompts the
+user for their password, and the synchronous call blocks your interface until they
+answer.
 
-[^1]: For more information on keys that can be used with .desktop files please visit: <http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s05.html>
-[^2]: If you would like more information on categories please visit: <http://standards.freedesktop.org/menu-spec/menu-spec-1.0.html>
-[^3]: A better way would probably be to install all the files to the library directory including the main python file. Then install a shell script to the binary directory that looks for and launches the directory. This way it does not need to append the to the system path the location of the applications python modules.
+Handle "not found" separately from "failed". `password_lookup_finish()` returns
+`None` when there is simply nothing stored, and raises `GLib.Error` when something
+went wrong — a locked keyring the user refused to unlock, or no Secret Service at
+all, which is normal on a bare X session.
+
+The full example is `examples/gtk4/desktop/passwords.py`.
+
+## Opening things {#launching}
+
+Shelling out to `xdg-open` is no longer necessary, and does not work in a sandbox.
+GTK 4.10 added launchers that go through the portal when there is one:
+
+```python
+launcher = Gtk.UriLauncher(uri="https://gtk.org/")
+launcher.launch(window, None, on_done)
+
+launcher = Gtk.FileLauncher(file=Gio.File.new_for_path(path))
+launcher.launch(window, None, on_done)          # open it
+launcher.open_containing_folder(window, None, on_done)   # or show it in the file manager
+```
+
+Asynchronous, like every other dialog, with a `launch_finish()` that raises if it
+did not work. Passing the parent window lets the portal show its confirmation
+dialog on top of yours.
+
+To find out what *would* open a file, or to offer a choice, `Gio.AppInfo` still
+answers:
+
+```python
+info = Gio.AppInfo.get_default_for_type("text/plain", False)
+print(info.get_display_name())
+```
+
+The full example is `examples/gtk4/desktop/launch-and-locate.py`.
+
+## Portals and the sandbox {#portals}
+
+Under Flatpak your process has no access to the file system outside its own
+directories, and none to the printer, camera, screen or location. Portals bridge
+that: a request goes over D-Bus to a service outside the sandbox, which asks the
+user, and the answer comes back as a specific grant.
+
+The good news for this book is how little of it you have to write. These already
+go through a portal when there is one:
+
+- `Gtk.FileDialog` — the user picks a file, and your sandbox is granted that file.
+- `Gtk.PrintOperation` — the print dialog and the job.
+- `Gtk.UriLauncher` and `Gtk.FileLauncher`.
+- `Gio.Notification`.
+- libsecret.
+
+Which means a program written the way this chapter describes is already
+sandbox-ready. The rest — screenshots, screen casting, location, running in the
+background, autostart, inhibiting suspend — has no GTK wrapper, and you either
+speak to the D-Bus interface directly (see [D-Bus](07-dbus.html)) or use the
+`libportal` library, which wraps them all.
+
+Two habits make the difference between a program that works sandboxed and one that
+does not:
+
+**Ask for files through a dialog rather than guessing paths.** A grant follows what
+the user chose. `os.listdir(os.path.expanduser("~"))` does not, and returns almost
+nothing inside a sandbox.
+
+**Keep hold of the `Gio.File` you were given**, not a path string you derived from
+it. Under the portal the path may exist only for as long as the grant does.
+
+## Summary
+
+- The application id names your desktop file, icon, D-Bus name and notifications.
+  Pick it once, in reverse DNS, and make everything match.
+- GSettings keys are declared in a schema, which is compiled and installed. Missing
+  schema means an abort, not an exception.
+- `settings.bind()` connects a key to a widget property in both directions, and is
+  most of what a preferences dialog needs.
+- Use `GLib.get_user_*_dir()` rather than building paths from `~`. Cache is
+  deletable; data is backed up.
+- A `.desktop` file needs a matching icon name, valid categories and
+  `update-desktop-database` afterwards — and notifications do not work without one.
+- Passwords go in libsecret, asynchronously, never in GSettings.
+- `Gtk.UriLauncher` and `Gtk.FileLauncher` replace `xdg-open` and work in a sandbox.
+- GTK's own dialogs already go through portals; ask for files rather than guessing
+  paths, and keep the `Gio.File`.
+
+[Audio and Video with GStreamer](06-multimedia-gstreamer.html) is next.

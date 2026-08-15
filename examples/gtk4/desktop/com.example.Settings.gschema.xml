@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.example.Settings" path="/com/example/Settings/">
+
+    <key name="greeting" type="s">
+      <default>'Hello'</default>
+      <summary>The word to greet with</summary>
+      <description>Shown in the entry, and remembered between runs.</description>
+    </key>
+
+    <key name="enabled" type="b">
+      <default>true</default>
+      <summary>Whether the greeting is shown at all</summary>
+    </key>
+
+    <key name="repeat" type="i">
+      <default>1</default>
+      <range min="1" max="10"/>
+      <summary>How many times to repeat the greeting</summary>
+    </key>
+
+    <key name="window-size" type="(ii)">
+      <default>(420, 280)</default>
+      <summary>The last window size</summary>
+    </key>
+
+  </schema>
+</schemalist>
