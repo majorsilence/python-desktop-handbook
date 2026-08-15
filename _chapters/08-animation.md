@@ -5,611 +5,287 @@ number: 8
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/animation/`. They are
+> run on each build, so if one of them stops working the build says so.
 
 ## Introduction
 
-Note: This chapter is about pyclutter 1.0 and no longer contains information on older versions.
+The previous edition of this book had a chapter on Clutter — a separate scene
+graph, with its own actors, its own stage and its own animation framework, bolted
+onto a GTK window. That is not how any of this works now.
 
-The best way to describe clutter is to quote its home page which states:
+**Clutter is gone.** It was folded into GNOME's compositor, deprecated as a public
+library, and the parts an application actually needed came back inside GTK 4. GTK
+now has a GPU-backed scene graph of its own (GSK), a frame clock, transforms on
+every widget, and — through libadwaita — a proper animation API. There is nothing
+left to bolt on.
 
-Clutter is an open source software library for creating fast, visually rich and animated graphical user interfaces.
+So this chapter is about four ways to make something move, in the order you should
+reach for them:
 
-Clutter can be integrated with many Linux technologies including GStreamer, Cairo a GTK+. It also is portable and runs on Windows and OSX which allows for cross platform goodness.
+1. **Let a container do it.** Stacks, revealers and navigation views animate their
+   own changes.
+2. **CSS.** Transitions and keyframes, for anything that is really a style change.
+3. **`Adw.Animation`.** Timed or spring-driven, when you are animating a value.
+4. **The frame clock.** When you are drawing every frame yourself.
 
-But how is clutter used? This is actually very simple. Instead of creating a gtk.Window as with using PyGTK, with clutter a clutter.Stage is created. And instead of using widgets, Actors are used. This is actually rather neat. We have Stages on which to do our work and Actors that perform.
+Most applications never get past the first two.
 
-Some base Actors included with clutter are:
+## Transitions you get for free {#transitions}
 
-- Texture
-- CloneTexture
-- Text - For all things text. Replaces Label and Entry
-- Rectangle - For creating Rectangles
-- Label - displaying Labels (deprecated as of 1.0)
-- Entry - For entering text (deprecated as of 1.0)
-
-A stage is created by using the clutter.Stage object like so:
-
-```python
-stage = clutter.Stage()
-```
-
-The size of stage can be set:
-
-```python
-stage.set_size(800, 400)
-```
-
-The title of the stage can be set using the stage.set\_title() method:
+Nearly all the motion in a well-behaved GTK application is a container animating
+its own state change.
 
 ```python
-stage.set_title("Hey Hey, My First Clutter App")
+stack = Gtk.Stack()
+stack.set_transition_duration(400)
+stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+stack.add_titled(first_page, "one", "One")
+stack.add_titled(second_page, "two", "Two")
 ```
 
-To make sure that a clutter application is shut down properly make sure to add
+Changing the visible child now animates. The types include `CROSSFADE`,
+`SLIDE_LEFT_RIGHT`, `SLIDE_UP_DOWN`, `OVER_UP` and a rotation, and
+`Gtk.StackSwitcher` or `Adw.ViewSwitcher` will drive the stack for you.
+
+`Gtk.Revealer` does the same for showing and hiding one thing:
 
 ```python
-stage.connect('destroy', clutter.main_quit)
+revealer = Gtk.Revealer()
+revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+revealer.set_transition_duration(300)
+revealer.set_child(extra_controls)
+
+toggle.bind_property("active", revealer, "reveal-child",
+                     GObject.BindingFlags.SYNC_CREATE)
 ```
 
-## Colors
+That `bind_property` is worth noticing: the revealer's state *is* a property, so
+there is no handler to write at all.
 
-The colour of a stage can be set using set\_color() method and using the clutter.color\_from\_string()[^1] method. The clutter parse method can take several different colour inputs including the colours as Text or RGB Notation.
+libadwaita adds more of the same idea — `Adw.NavigationView` for
+push-and-pop navigation, `Adw.OverlaySplitView` for a sidebar that slides away on a
+narrow window, `Adw.Carousel` for swipeable pages. All animated, none of it your
+code.
 
-The colour of a stage can be set:
+The full example is `examples/gtk4/animation/transitions.py`.
+
+## CSS {#css}
+
+GTK styles its widgets with a subset of CSS, and that subset includes transitions
+and keyframe animations. For anything that is really a *style* change, this is the
+least code:
+
+```css
+.swatch {
+    background: #3584e4;
+    border-radius: 12px;
+    transition: background 400ms ease-in-out,
+                border-radius 400ms ease-in-out;
+}
+
+.swatch:hover      { background: #813d9c; }
+.swatch.round      { background: #2ec27e; border-radius: 60px; }
+
+@keyframes pulse {
+    from { opacity: 1;    }
+    50%  { opacity: 0.35; }
+    to   { opacity: 1;    }
+}
+
+.pulsing { animation: pulse 1.2s ease-in-out infinite; }
+```
+
+Load it once, onto the display rather than onto a widget:
 
 ```python
-stage.set_color(clutter.color_from_string("red"))
-stage.set_color(clutter.Color(255, 0, 0))
+provider = Gtk.CssProvider()
+provider.load_from_data(CSS)
+Gtk.StyleContext.add_provider_for_display(
+    Gdk.Display.get_default(), provider,
+    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+)
 ```
 
-Colours can be applied to more then just stages, they may also be applied to all the Actors that will be shown in the next section.
+After that, animating is `widget.add_css_class("round")` and
+`widget.remove_css_class("round")`. The hover state costs nothing at all.
 
-## User Input
+Two things to know. GTK's CSS is a *subset* — there is no layout in it, no
+`display`, no `float`, no positioning; it styles widgets that GTK has already laid
+out. And the property names are GTK's, so it is worth reading the GTK CSS
+documentation rather than assuming the web's.
 
-### Keyboard
+The GTK Inspector (`GTK_DEBUG=interactive python3 app.py`) has a CSS editor that
+applies changes live, which turns styling from a compile-and-look loop into
+something interactive.
 
-It is very easy to catch user input. For catching keyboard events the stage must connect the "key-press-event" to a handler.
+The full example is `examples/gtk4/animation/css-animation.py`.
+
+## AdwAnimation {#adw-animation}
+
+When you are animating a *value* rather than a style, libadwaita has the API. An
+animation is three things: a widget, to borrow a frame clock from; a range of
+values; and a **target** that receives each value.
 
 ```python
-# key-press-event is for the keyboard
-stage.connect("key-press-event", on_key_press_event)
-
-def on_key_press_event(self, stage, event):
-    # event has the following:
-    # event.hardware_keycode
-    # event.keyval - ascii (or unicode) value of the key
-    # event.modifier_state
-    # event.put
-    # event.source
-    # event.time
-    # event.type
-
-    print "keyval ", event.keyval
-    try:
-        print "key pressed ", chr(event.keyval)
-    except ValueError:
-        print "Key pressed not recognized ascii character."
-        print "Returning from key pressed function"
-        return
+animation = Adw.TimedAnimation.new(
+    widget, 0, 380, 900,                            # from, to, milliseconds
+    Adw.CallbackAnimationTarget.new(self.on_value),
+)
+animation.set_easing(Adw.Easing.EASE_IN_OUT_CUBIC)
+animation.play()
 ```
 
-What is probably going to be the most useful when handling a key press event is the character pressed. The event.keval can be converted using the builtin function *chr*. For example in ascii 97 is a. So if we press a and have the following code
+There are two kinds of target, and the second one is the reason to like this API:
 
 ```python
-print chr(event.keyval)
+Adw.CallbackAnimationTarget.new(fn)                    # fn(value) every frame
+Adw.PropertyAnimationTarget.new(widget, "opacity")     # no callback at all
 ```
 
-an "a" will be printed to the screen.
+A property target writes straight to a GObject property, so fading a widget is an
+animation object and nothing else.
 
-### Mouse
-
-Catching input from a mouse is also very easy and all that needs to be done is to handle the "button-press-event". The handler function takes two arguments "stage" and "event" and is handled like so:
+`Adw.TimedAnimation` has a fixed duration and an easing curve — around thirty of
+them, from `LINEAR` through `EASE_IN_OUT_CUBIC` to `EASE_OUT_BOUNCE`. It can also
+repeat and alternate, which covers "flash twice" in one object:
 
 ```python
-stage.connect("button-press-event", on_button_press_event)
-
-def on_button_press_event (stage, event):
-    #mouse button
-    #event.button - 1 left click
-    #             - 3 right click
-    #             - 2 left and right clicked same time
-    #
-    # event.x - X Coordinate of button press
-    # event.y - Y Coordinate of button press
-    #
-    print "mouse button %d pressed at (%d, %d)" % (event.button, event.x, event.y)
+animation.set_alternate(True)
+animation.set_repeat_count(2)
 ```
 
-## Actors
-
-### Text {#sub-clutter-actor-text}
+`Adw.SpringAnimation` has no duration. It simulates a spring and runs until it
+settles:
 
 ```python
-class clutter.Text(clutter.Actor)
-    get_text()
-    set_text(text) - Sets the text in the entry
-    set_editable(Boolean)
-    set_reactive(Boolean)
-    set_position(xPos, yPos)
-    ...
+Adw.SpringAnimation.new(
+    widget, 0, 380,
+    Adw.SpringParams.new(0.6, 1, 180),    # damping ratio, mass, stiffness
+    target,
+)
 ```
 
-You can set text in it using the set\_text(text) method and get text using the get\_text() method. If you want to use the Text actor as a label you would set it to *set\_editable(False)*. Here is an example with a Text actor being created and added to a stage. You will have to click on the Text actor to be able to type in it, just like a normal gtk or windows text field.
+A damping ratio below 1 overshoots and wobbles; exactly 1 is critically damped and
+arrives as fast as it can without overshooting; above 1 crawls in. Springs are the
+right choice for anything the user is *dragging*, because a spring can be handed a
+starting velocity — `set_initial_velocity()` — and continue naturally from the
+gesture that started it. That is why a flicked list decelerates the way it does.
+
+The `done` signal fires when an animation finishes:
 
 ```python
-class EntryExample:
-    def __init__(self):
-       self.stage = clutter.Stage()
-       self.stage.set_size(400, 400)
-       self.stage.set_color(clutter.color_from_string("red"))
-       self.text = clutter.Text()
-       self.text.set_text("Text Entry")
-       self.text.set_color(clutter.color_parse("green"))
-       self.text.set_size(150, 50)
-       self.text.set_position(200, 200)
-       self.text.set_reactive(True)
-       self.text.set_editable(True)
-
-       self.text.connect("button-press-event",
-          self.on_mouse_press_event)
-       self.text.connect("key-press-event",
-          self.on_key_press_event)
-       self.stage.connect('destroy',
-          clutter.main_quit)
-
-        self.stage.add(self.text)
-        self.stage.show_all()
-
-    def on_mouse_press_event(self, actor, event):
-       self.stage.set_key_focus(self.text)
-       return False
-
-    def on_key_press_event(self, actor, event):
-        print "Text Actor is: ", actor.get_text()
-        print "Key pressed is: ", unichr(event.keyval)
-
-if __name__ == "__main__":
-    app = EntryExample()
-    clutter.main()
+animation.connect("done", lambda _a: self.status.set_text("finished"))
 ```
 
-As can be seen in the code above the stage color is set to red, the text color in the Text actor is set to green. The text actor is set to have width of 150 and a height of 50. The position of the Text actor on the stage is set to x 200 y 200. The actor is also set to be editable and reactive. Simple enough.
+Calling `play()` on a running animation restarts it. `pause()`, `resume()`,
+`reset()` and `skip()` do what they say, and `skip()` jumps straight to the end
+value while still emitting `done` — which is the correct way to cancel, because
+whatever the animation was setting ends up where it was going.
 
-Three call back functions are added. One callback for when a mouse button is pressed over the Text actor. One callback event for when a key is pressed on the keyboard while the focus is in the Text actor. Finally the last callback event is for the stage destroy signal which is connected above to `clutter.main_quit` to insure the program exits properly.
+The full example is `examples/gtk4/animation/adwaita-animations.py`.
 
-### Rectangles
+## The frame clock {#frame-clock}
+
+For a drawing that changes every frame — a visualiser, a game, a clock with a
+sweeping second hand — you want the frame clock directly:
 
 ```python
-class clutter.Rectangle(clutter.Actor):
-    clutter.Rectangle(color=None)
-    get_color()
-    set_color(color)
-    get_border_color()
-    set_border_color(color)
-    get_border_width()
-    set_border_width(width)
+def on_tick(self, widget, frame_clock):
+    now = frame_clock.get_frame_time()          # microseconds, monotonic
+    if self.start_time is None:
+        self.start_time = now
+
+    self.phase = ((now - self.start_time) % PERIOD_US) / PERIOD_US
+    widget.queue_draw()
+    return GLib.SOURCE_CONTINUE
+
+widget.add_tick_callback(on_tick)
 ```
 
-Creating rectangles does not entail much. Basically you just call the clutter.Rectangle class and you are done. Of course you will probably want to do more to it then that and add it to a stage. As can be seen in the class outline of a clutter.Rectangle above there is not much to work with in and of themselves making them easy to work with.
+**Do not animate with `GLib.timeout_add(16, ...)`.** A timeout is not synchronised
+with the display: frames land slightly early or late, and the result judders in a
+way that is hard to see in a screenshot and obvious in motion. The frame clock's
+`get_frame_time()` is the time the frame will be *displayed*, which is what makes
+motion smooth.
 
-Setting a border width on a Rectangle will increase its size bye the border size multiplied by 2. So if your rectangle is set to 200 wide and you add a border of 20 you end up with a rectangle that is 240 wide.
+Compute position **from elapsed time**, never by adding a step per frame. A frame
+can be dropped, and a per-frame increment turns a dropped frame into a permanent
+drift; deriving the position from the clock makes a dropped frame invisible.
 
-### Textures
+The callback runs until it returns `GLib.SOURCE_REMOVE`, and stops on its own when
+the widget is unmapped. Keep the id from `add_tick_callback()` if you want to stop
+it yourself with `remove_tick_callback()`.
+
+The full example is `examples/gtk4/animation/frame-clock.py`.
+
+## Moving a whole widget {#transforms}
+
+Every widget has a transform, applied by its parent when it is snapshotted. To
+move, rotate or scale one without touching its layout, override `do_snapshot()`
+and transform the snapshot before chaining up:
 
 ```python
-class clutter.Texture(Actor)
-        set_area_from_rgb_data(data, has_alpha, x, y, width, height, rowstride, bpp, flags, error)
-            - Updates a sub-region of the pixel data in a Texture.
-        set_from_rgb_data(data, has_alpha, width, height, rowstride, bpp, flags, error)
-            - Sets the Texture from RBG data.
-        set_from_yuv_data(data, width, height, flags, error)
-            - Sets the Texture from a YUV image data.
-        set_from_file(filename, error) - obvious
-        set_filter_quality(filter_quality)
-        ...
+def do_snapshot(self, snapshot):
+    snapshot.save()
+    snapshot.translate(Graphene.Point().init(self.offset, 0))
+    snapshot.rotate(self.angle)
+    Gtk.Widget.do_snapshot(self, snapshot)
+    snapshot.restore()
 ```
 
-Loading an image file and setting it up as a texture is very simple.
+Combine that with an `Adw.CallbackAnimationTarget` that sets `self.angle` and
+calls `queue_draw()`, and you have any transform animation you like — running on
+the GPU, with no re-layout, at any scale factor.
+
+This is what Clutter's actors were for, and it is now three lines in a widget you
+already have.
+
+## Respecting the user {#reduced-motion}
+
+Some people get motion sickness from animated interfaces, and every desktop has a
+setting for it. Honour it.
+
+GTK's own transitions already do. If you write your own, check:
 
 ```python
-purple_flower = clutter.Texture(filename="flower.jpg")
+settings = Gtk.Settings.get_default()
+if settings.get_property("gtk-enable-animations"):
+    animation.play()
+else:
+    animation.skip()          # jump to the end value, no motion
 ```
 
-Look at that, only one line of code and we have a texture that is ready to be used in our pyclutter program. Now all that needs to be done is add the purple\_flower to the stage.
+`skip()` rather than not playing, so whatever the animation was setting still ends
+up where it should be.
 
-```python
-import clutter
-stage = clutter.Stage()
-stage.set_size(400, 400)
+In CSS, the same preference is the media query browsers use:
 
-purple_flower = clutter.Texture(filename="flower.jpg")
-(width, height) = purple_flower.get_size()
-stage.add(purple_flower)
-
-stage.show_all()
-stage.connect('destroy', clutter.main_quit)
-clutter.main()
+```css
+@media (prefers-reduced-motion: reduce) {
+    .swatch  { transition: none; }
+    .pulsing { animation: none; }
+}
 ```
 
-#### Cloning a textue
-
-```python
-class clutter.CloneTexture(Actor)
-    get_parent_texture()
-    set_parent_texture(Texture)
-```
-
-Cloning a texture is as easy to create as the original texture.
-
-```python
-# Create the original Texture
-purple_flower = clutter.Texture(filename="flower.jpg")
-
-# Create the cloned Texture
-clone = clutter.CloneTexture(purple_flower)
-```
-
-And it is that simple. Now the actual work starts with making the texture do what it is supposed to be doing. It should probably be properly placed, maybe have some behaviours (this is discussed later), setting up time lines.
-
-Lets make the Texture and the cloned texture show up on the stage now.
-
-```python
-clone.set_position(200, 200)
-stage.add(purple_flower, clone)
-stage.show_all()
-stage.connect('destroy', clutter.main_quit)
-```
-
-Now the the original texture is in the upper most left corner of the stage and the clone is displayed at coordinates x 200 and y 200.
-
-```python
-import clutter
-
-def create_texture(fName):
-    image = clutter.Texture(filename=fName)
-    (width, height) = image.get_size()
-    return image
-
-stage = clutter.Stage()
-stage.set_size(400, 400)
-
-# Create the original Texture from a picture of a flower
-purple_flower = create_texture("flower.jpg")
-
-# Create a clone of the origial Texture cloned_flower = clutter.CloneTexture(purple_flower)
-cloned_flower.set_position(200, 200)
-
-stage.add(purple_flower, cloned_flower) stage.show_all() stage.connect('destroy', clutter.main_quit)
-clutter.main()
-```
-
-### Labels
-
-Labels have been deprecated and as of pyclutter 1.0 you they should not be used. Instead the Text actor should be used and will be demonstrated here. To see more about the Text actor please see [Text](08-animation.html#sub-clutter-actor-text).
-
-```python
-class clutter.Text
-    set_text(text)
-    set_editable(Boolean)
-    set_color(color)
-    ....
-```
-
-So here is the example of use Text as a label. Bascially all that is being done is using the method *set\_editable(False)* to make sure users cannot change the text.
-
-```python
-import clutter
-
-stage = clutter.Stage()
-stage.set_size(400, 400)
-
-label = clutter.Text()
-label.set_editable(False)
-label.set_text("Clutter Label Text")
-label.set_color(clutter.color_from_string("brown"))
-
-# If no position is given it defaults to the upper most left corner.
-stage.add(label)
-stage.show_all()
-stage.connect('destroy', clutter.main_quit)
-clutter.main()
-```
-
-## Animations
-
-### Timelines {#sub-clutter-timelines}
-
-```python
-class clutter.Timeline:
-     __init__(duration)
-         fps - Frames per second
-         num_frames - The total number of frames
-         duration - The duration of the timeline, in milliseconds
-    def get_duration()
-    def set_duration(msecs)
-    def get_direction() - retrieves the direction of the timeline, either forward or backward.
-    def set_direction()
-    def get_loop()
-    def set_loop(True or False) - Set the timeline to loop
-    def get_progress()
-    def start() - Start the timeline
-    def pause() - Pause the timeline
-    def stop()
-    def rewind()
-```
-
-To use a time line you will want to add it to a clutter actor. The timeline is setup and then the animation effect that it is to be applied to it.
-
-So lets create a time line with a duration of 3000(3 seconds).
-
-```python
-timeline = clutter.Timeline(duration=3000)
-```
-
-Next we will set the timeline to loop using the set\_loop() method. This sets the timeline to loop once it has finished each run through.
-
-```python
-timeline.set_loop(True)
-```
-
-### Alpha {#sub-clutter-alpha}
-
-```python
-class clutter.Alpha(goject.GObject)
-    clutter.Alpha(timeline, func, data)
-        def get_alpha()
-        def get_timeline()
-        def set_func(func)
-        def set_timeline(timeline)
-```
-
-Next if you want to apply an animation you will want to setup the effect that is going to happen to your chosen object. So what is going to happen now is to create a clutter.Alpha object. Then create a clutter.BehaviourOpacity object using our just created alpha and apply this action to our rectangle. Then start the timeline running which will start the animation.
-
-```python
-alpha = clutter.Alpha(timeline, clutter.EASE_IN_OUT_BOUNCE)
-behaviour = clutter.BehaviourOpacity(0xdd, 0, alpha)
-behaviour.apply(rect)
-
-# start the timeline running, thus starting the animation
-timeline.start()
-```
-
-The timeline can be setup anywhere and then started at any time using the timeline.start() method and stopped with the timeline.stop() method.
-
-If we put all this together we get a working application that is only a few lines long.
-
-What is needed to be known about clutter.Alpha is that it is a function of time not pixel form of alpha.
-
-There are many predefined Clutter.Alpha functions that can be used with the clutter.Alpha class to effect the behaviour of the timeline. You will just have to experiment with them to see what suits your needs.
-
-- clutter.EASE\_IN\_OUT\_BOUNCE
-- clutter.EASE\_IN\_BACK
-- clutter.EASE\_IN\_BOUNCE
-- clutter.EASE\_IN\_CIRC
-- clutter.EASE\_IN\_CUBIC
-- clutter.EASE\_IN\_ELASTIC
-- clutter.EASE\_IN\_EXPO
-- clutter.EASE\_IN\_OUT\_BACK
-- clutter.EASE\_IN\_OUT\_CIRC
-- clutter.EASE\_IN\_OUT\_CUBIC
-- clutter.EASE\_IN\_OUT\_ELASTIC
-- clutter.EASE\_IN\_OUT\_EXPO
-- clutter.EASE\_IN\_OUT\_QUAD
-- clutter.EASE\_IN\_OUT\_QUART
-- clutter.EASE\_IN\_OUT\_QUINT
-- clutter.EASE\_IN\_OUT\_SINE
-- clutter.EASE\_IN\_QUAD
-- clutter.EASE\_IN\_QUART
-- clutter.EASE\_IN\_QUINT
-- clutter.EASE\_IN\_SINE
-- clutter.EASE\_OUT\_BACK
-- clutter.EASE\_OUT\_BOUNCE
-- clutter.EASE\_OUT\_CIRC
-- clutter.EASE\_OUT\_CUBIC
-- clutter.EASE\_OUT\_ELASTIC
-- clutter.EASE\_OUT\_EXPO
-- clutter.EASE\_OUT\_QUAD
-- clutter.EASE\_OUT\_QUART
-- clutter.EASE\_OUT\_QUINT
-- clutter.EASE\_OUT\_SINE
-
-### BehaviourOpacity {#sub-clutter-behaviouropacity}
-
-Please see the section [Alpha](08-animation.html#sub-clutter-alpha) before reading this section. Using Behaviour Opacity
-
-```python
-import clutter
-
-class Blinker:
-    def __init__(self):
-        self.stage = clutter.Stage()
-        self.stage.set_color(clutter.color_from_string("red"))
-        self.stage.set_size(400, 400)
-        self.stage.set_title("My Blinking (BehaviourOpacity) Rectangle Example")
-
-        self.rect = clutter.Rectangle()
-        self.rect.set_color(clutter.color_from_string("green"))
-        self.rect.set_size(200, 200)
-
-        rect_xpos = self.stage.get_width() / 4
-        rect_ypos = self.stage.get_height() / 4
-
-        self.rect.set_position(rect_xpos, rect_ypos)
-        self.timeline = clutter.Timeline(duration=3000)
-        self.timeline.set_loop(True)
-
-        alpha = clutter.Alpha(self.timeline, clutter.EASE_IN_OUT_SINE)
-        self.behaviour = clutter.BehaviourOpacity(alpha=alpha , opacity_start=0xdd, opacity_end=0)
-        self.behaviour.apply(self.rect)
-        self.timeline.start()
-
-        self.stage.add(self.rect)
-        self.stage.show_all()
-        self.stage.connect('destroy', clutter.main_quit)
-
-if __name__ == "__main__":
-    app = Blinker()
-    clutter.main()
-```
-
-### BehaviourRotate {#sub-clutter-behaviourrotate}
-
-```python
-class clutter.BehaviourRotate(Behaviour)
-    clutter.BehaviourRotate(alpha(optional),  angle_end, angle_start)
-        def get_axis()
-        def set_axis(axis)
-            -clutter.Z_AXIS
-            -clutter.Y_AXIS
-            -clutter.X_AXIS
-        get_bounds(angle_start, angle_end)
-        set_bounds(angle_start, angle_end)
-        get_center(x, y, z)
-        set_center(x, y, z)
-        get_direction()
-        set_direction(direction)
-        ...
-```
-
-The clutter.BehaviourRotate class allows you to set a rotate behaviour on an a chosen actor.
-
-The example that is to follow will create a Rectangle and add it to a stage and then we will create a time line. The timeline will control a BehaviourRotate that will affect the Rectangle (though any Actor will do).
-
-At this point I will assume you know how to create a rectangle and add it to a stage, so from this point out I will just focus on the Behaviours.
-
-So we have to create a timeline that will control the behaviour.
-
-```python
-timeline = clutter.Timeline(duration=3000)
-timeline.set_loop(True)
-alpha = clutter.Alpha(timeline, clutter.EASE_IN_OUT_SINE)
-```
-
-Now that the timeline that is going to be used with the behaviour has been created we can create the behaviour itself. You will should notice that the axis is set to clutter.Z\_AXIS, also available are clutter.X\_AXIS and clutter.Y\_AXIS.
-
-```python
-rotate_behaviour = clutter.BehaviourRotate(axis=clutter.Z_AXIS, angle_start=0.0, angle_end=359.0)
-rotate_behaviour.set_alpha(alpha)
-rotate_behaviour.apply(rect)
-```
-
-So a instance of BehaviourRotate is created, rotating on the z axis, using the alpa timeline created above and this is applied to the rectangle instance rect.
-
-```python
-import clutter
-
-stage = clutter.Stage()
-stage.set_size(400, 400)
-rect = clutter.Rectangle()
-rect.set_color(clutter.color_from_string("red"))
-rect.set_size(100, 100) rect.set_position(150, 150)
-
-timeline = clutter.Timeline(duration=3000)
-timeline.set_loop(True)
-alpha = clutter.Alpha(timeline, clutter.EASE_IN_OUT_SINE)
-
-rotate_behaviour = clutter.BehaviourRotate(
-    axis=clutter.Z_AXIS, angle_start=0.0, angle_end=359.0)
-rotate_behaviour.set_alpha(alpha)
-rotate_behaviour.apply(rect)
-timeline.start()
-
-stage.add(rect)
-stage.show_all()
-stage.connect('destroy', clutter.main_quit)
-clutter.main()
-```
-
-### BehaviourScale - Not Finished {#sub-clutter-behaviourscale}
-
-```python
-class clutter.BehaviourScale(Behaviour)
-    clutter.BehaviourScale(x_scale_start, y_scale_start, x_scale_end, y_scale_end, alpha(optional) )
-        def get_bounds()
-        def set_bounds(x_scale_begin, y_scale_begin, x_scale_end, y_scale_end)
-```
-
-### BehaviourDepth {#sub-clutter-behaviourdepth}
-
-```python
-class clutter.BehaviourDepth
-    clutter.BehaviourDepth(depth_start, depth_end)
-        def set_bounds(depth_start, depth_end)
-        def get_bounds(depth_start, depth_end)
-```
-
-BehaviourDepth works like the other behaviours that have been discussed above. You create your behaviour specifying your desired action and attach it to a timeline.
-
-With BehaviourDepth the only options (and required) are the start depth and end depth. Play around with them a little to get your desired result.
-
-```python
-timeline = clutter.Timeline(duration=6000)
-timeline.set_loop(True)
-alpha = clutter.Alpha(timeline, clutter.EASE_IN_OUT_SINE)
-
-rotate_behaviour = clutter.BehaviourDepth(0, 250)
-rotate_behaviour.set_alpha(alpha)
-rotate_behaviour.apply(rect)
-```
-
-All you have to do to start the required behaviour is start the time line and watch the results.
-
-```python
-import clutter
-
-stage = clutter.Stage()
-stage.set_size(400, 400)
-rect = clutter.Rectangle()
-rect.set_color(clutter.color_from_string("red"))
-rect.set_size(100, 100) rect.set_position(150, 150)
-
-timeline = clutter.Timeline(duration=6000)
-timeline.set_loop(True) alpha = clutter.Alpha(
-    timeline, clutter.EASE_OUT_BOUNCE)
-
-rotate_behaviour = clutter.BehaviourDepth(0, 250)
-rotate_behaviour.set_alpha(alpha)
-rotate_behaviour.apply(rect)
-timeline.start()
-
-stage.add(rect)
-stage.show_all()
-stage.connect('destroy', clutter.main_quit)
-clutter.main()
-```
-
-## Groups and Positioning {#sec-clutter-groups-and-positioning}
-
-Groups allow the programmer to group together many actors. Instead of the Actor references the colors and position of the stage, they reference off of the group that they are in. Groups also allow for relative positioning, as in the positions of Actors are placed relative to their parent Group.
-
-For example if you have a Rectangle and it is inside Group when you set the position of the rectangle to (100, 100), it is relative to the position of the group. So in the following snippet of code, the Rectangle is is being set to (100, 100) in the Group but relative to the stage it is set to (200, 200)
-
-```python
-group = clutter.Group()
-group.set_position(100, 100)
-
-rect = clutter.Rectangle()
-rect.set_size(100, 100)
-rect.set_position(100, 100)
-group.add(rect)
-```
+Two more habits worth keeping. Animation durations belong in the 150–400 ms range;
+anything slower stops feeling responsive and starts feeling broken. And never
+animate something the user is waiting on — a spinner during a two-second load is
+fine, a 600 ms slide before a menu opens is not.
 
 ## Summary
 
-For more information about clutter you can visit its web site at:
+- Clutter is gone. GTK 4 has the scene graph, the frame clock and the transforms;
+  libadwaita has the animation API.
+- Reach for a container transition first, CSS second, `Adw.Animation` third, the
+  frame clock last.
+- `Adw.PropertyAnimationTarget` animates a GObject property with no callback at all.
+- Springs take an initial velocity, which is what makes gesture-driven motion feel
+  continuous.
+- Use `add_tick_callback()`, not a 16 ms timeout, and derive position from elapsed
+  time rather than accumulating per frame.
+- Transform a whole widget by transforming its snapshot before chaining up.
+- Check `gtk-enable-animations` and `prefers-reduced-motion`, and cancel with
+  `skip()`.
 
-<http://www.clutter-project.org>
-
-For more information on the pyclutter api you can download the pyclutter source from the clutter project site and view the documentation or load the documentation in a python console using:
-
-```python
-import clutter
-help(clutter)
-```
-
-Also for each section of pyclutter covered in this chapter full source examples are on the books website. You are encouraged to download and inspect these and expand upon them to further learn how to best use clutter for your own projects. The address for these downloads is <http://www.majorsilence.com/rubbish/pygtk-book/examples/>.
-
-[^1]: Formally clutter.color\_parse(...)
+[Embedding Web Content](09-web-content.html) is next.
