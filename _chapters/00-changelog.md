@@ -5,67 +5,48 @@ number: 0
 unnumbered: true
 ---
 
-Version 0.13 October 9, 2012
+## Version 1.0 — in progress
 
-## ChangeLog
+The book is being rewritten. The previous edition taught PyGTK and GTK 2, a stack
+that has had no release since 2011; this one teaches GTK 4 with PyGObject in Part I
+and Qt 6 with PySide6 in Part II.
 
-### Version 0.03
+Three things changed about how the book is made, as well as what is in it:
 
-*23 Dec 2008*
+- The source moved from LyX to Markdown. The site is built with Jekyll and the PDF
+  with pandoc, from the same files.
+- Every listing is a file under `examples/`, and every example is started and shut
+  down again on each build. Code that stops working fails the build.
+- Figures that can be generated are generated, by running the example that draws
+  them, rather than being screenshots that slowly stop matching the text.
 
-- Added Secton on Widgets - [Widgets - What are they?](01-getting-started.html)
-- Added Section on First PyGTK Application - [Creating your first PyGTK application](01-getting-started.html)
-- Added Section on Layout Boxes - [Layout - Boxes](01-getting-started.html)
+Rewritten so far:
 
-### Version 0.04
+- **[Getting Started with GTK 4](01-getting-started.html)** — replaces *PyGTK
+  Introduction*. `Gtk.Application`, boxes without packing arguments, grouped check
+  buttons in place of radio buttons, `Gtk.DropDown`, menus as models plus actions,
+  asynchronous dialogs, and an introduction to libadwaita.
+- **[More GTK 4](02-more-gtk4.html)** — replaces *More PyGTK*. List and column
+  views over `Gio.ListStore`, `Gtk.FileDialog`, drag and drop through controllers,
+  `Gtk.Picture`, `Gtk.Template` over `.ui` files, and notifications.
+- **[Drawing with Cairo](03-drawing-with-cairo.html)** — replaces *Cairo*. Cairo
+  through `Gtk.DrawingArea`, Pango for text, and `GtkSnapshot` for widget drawing.
+- **[Migrating from PyGTK](92-migrating-from-pygtk.html)** — new. A translation
+  table from the idioms of the previous edition.
 
-- Added Section on Callbacks - [Callbacks - Reacting to program events](01-getting-started.html)
-- Added PyGTK on Windows - PyGTK and Windows
+Chapters not yet rewritten still carry their GTK 2 text and say so at the top.
 
-### Version 0.05
+Dropped, because the technology was retired rather than replaced: the IronPython
+and Gtk# chapter, the PyGTK-on-Windows appendix, and the unfinished Telepathy,
+Geoclue and custom-widget chapters.
 
-- Added Section on PyGObject (only talks about gobject.timeout\_add) - [PyGobject](05-desktop-integration.html#sec-pygobject)
-- Added Section on Labels - [Labels](01-getting-started.html)
-- Added Section on Check Buttons - [Check Buttons](01-getting-started.html)
+## Earlier editions
 
-### Version 0.06
+Versions 0.03 to 0.13, from December 2008 to October 2012, covered PyGTK and GTK 2:
+widgets and layout, Glade and libglade, Cairo, printing, GConf and desktop
+integration, GStreamer, D-Bus, Clutter, embedded Mozilla and Internet Explorer,
+internationalization, and IronPython with Gtk#.
 
-*12 Feb 2009*
-
-- Added code example for gstreamer codec installer - [Codec Buddy - Auto install multimedia Codecs](06-multimedia-gstreamer.html#sec-gst-codec-buddy)
-- Added Section on Buttons - [Buttons](01-getting-started.html)
-- Added Section on Radio Buttons - [Radio Buttons](01-getting-started.html)
-- Added Section on Toggle Buttons - [Toggle Buttons](01-getting-started.html)
-- Added Section on Text Entry - [Text Entries](01-getting-started.html)
-
-### Version 0.07
-
-- Added Section on MessageDialog - [Message Dialogs](01-getting-started.html)
-- Added Section on Statusbar - [Statusbar](01-getting-started.html)
-
-### Version 0.08
-
-- Updated chapter on clutter to pyclutter 1.0
-
-### Version 0.09
-
-- Book text license change to creative commons Attribution-ShareAlike 3.0 Unported
-
-### Version 0.10
-
-*02 April 2010*
-
-- Add new chapter on IronPython and Gtk-Sharp
-- Add basic gtk-sharp and IronPython example
-
-### Version 0.11
-
-- Clarify what widgets are compared to .NET winforms [Widgets - What are they?](01-getting-started.html)
-
-### Version 0.12
-
-- Fixed typos in Internalization code examples [gtk.Builder Translation](10-internationalization.html#sec-gtk-builder-translation)
-
-### Version 0.13
-
-- Fixed added notes about using math.degrees and math.radians [Radians and Degrees](03-drawing-with-cairo.html#sub-radians-and-degrees)
+That edition is preserved in the git history of this repository, and the last PDF
+built from the LyX source is
+[pygtk-notebook-latest-0.13.pdf](http://files.majorsilence.com/pygtkbook/pygtk-notebook-latest-0.13.pdf).
