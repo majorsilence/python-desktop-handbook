@@ -39,3 +39,15 @@ done
 rm -f examples/gtk4/cairo/surfaces.pdf \
       examples/gtk4/cairo/surfaces.svg \
       examples/gtk4/cairo/surfaces.ps
+
+# Figures that are a page of a generated PDF need poppler to rasterise them.
+if command -v pdftoppm >/dev/null 2>&1; then
+  mkdir -p images/gtk4-printing
+  ( cd examples/gtk4/printing && python3 print-to-pdf.py >/dev/null )
+  pdftoppm -png -r 100 -f 1 -l 1 -singlefile \
+    examples/gtk4/printing/print-to-pdf.pdf images/gtk4-printing/printed-page
+  rm -f examples/gtk4/printing/print-to-pdf.pdf
+  echo "wrote images/gtk4-printing/printed-page.png"
+else
+  echo "skipping the printed-page figure: pdftoppm not installed" >&2
+fi

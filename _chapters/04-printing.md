@@ -5,211 +5,266 @@ number: 4
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/printing/`. They are
+> run on each build, and the printed page below is the actual output of one of them.
 
-A requirement for printing with PyGTK is cairo so it will be helpful to read the chapter on cairo first. However it is only necessary if you wish to know what is going on. If all you want is quick and easy printing than this chapter by itself should suffice.
+## Introduction
 
-Cairo is not only used for drawing pretty pictures. It can be used with PyGTK to print documents or whatever it is you wish to print.
+Printing in GTK is [Drawing with Cairo](03-drawing-with-cairo.html) with a
+different surface and a small amount of paperwork. `Gtk.PrintOperation` handles the
+paperwork — talking to CUPS, showing the print dialog, running the preview — and
+then hands you a Cairo context and asks you to draw a page.
 
-## Print Example
+That is the whole idea. If you can draw it on screen you can print it, and the
+drawing code often transplants unchanged.
 
-This chapter will provide a simple python class that takes as arguments:
+There are two printing APIs in GTK 4, and they are for different jobs:
 
-- action - The action to be performed (see section [Print Actions](04-printing.html#sub-cario-print-actions))
-- data - print the provided string
-- filename - open a text file to be printed
+`Gtk.PrintOperation`
+: The high-level one. It paginates, drives the dialog and the preview, and calls
+  you back per page. Use it whenever your program is generating the pages.
 
-To use the PrintExample class all you have to do is create an instance specifying some data to print and the type of print action that is to be taken. For example lets say that the text "This text is Printed" is to be printed with a print dialog being opened to the user, then the following code would be used.
+`Gtk.PrintDialog`
+: Added in GTK 4.14. Asynchronous, like the other new dialogs, and it prints a
+  **file** or a stream you already have. Use it when you already hold a finished
+  PDF and only need the user to pick a printer.
 
-```python
-printer = PrintExample(gtk.PRINT_OPERATION_ACTION_PRINT_DIALOG,
-"This text is Printed")
-```
+This chapter is about the first one.
 
-Inside the \_\_init\_\_ method of the PrintExample class the paper size(see section[Paper Sizes](04-printing.html#sub-cario-paper-sizes)) is set, page setup information is created, and a print operation is initiated.
+## The shape of a print job {#shape}
 
-```python
-class PrintExample:
-  def __init__(self, action=None, data=None, filename=None):
-    self.text = data
-    self.layout = None
-    self.font_size=12
-    self.lines_per_page=0
-    if action==None:
-      action = gtk.PRINT_OPERATION_ACTION_PREVIEW
+A job runs in three acts, each a signal:
 
-    paper_size = gtk.PaperSize(gtk.PAPER_NAME_A4)
-    setup = gtk.PageSetup()
-    setup.set_paper_size(paper_size)
+`begin-print`
+: The printer and the page setup are settled, so you can finally ask how big a
+  page is. Work out how many pages there are and call `set_n_pages()`.
 
-    print_ = gtk.PrintOperation()
-    print_.set_default_page_setup(setup)
-    print_.set_unit(gtk.UNIT_MM)
+`draw-page`
+: Called once per page, in order, with a Cairo context and a page number.
 
-    print_.connect("begin_print", self.begin_print)
-    print_.connect("draw_page", self.draw_page)
-    if action == gtk.PRINT_OPERATION_ACTION_EXPORT:
-      print_.set_export_filename(filename)
-
-   response = print_.run(action)
-```
-
-So first off in the \_\_init\_\_ method a few instance variables are created.
-
-self.text
-: Is used to hold the data that is to be printed
-
-self.layout
-: Is used to hold an pango layout instance
-
-self.font\_size
-: Is used to hold the font size that will be use with the layout with a pango.FontDescription instance
-
-self.lines\_per\_page
-: Is used to store how many lines are available per page
-
-Next it checks to see what action as been set. If there is no action it will set as default to show a print preview.
+`end-print`
+: Let go of whatever `begin-print` set up.
 
 ```python
-action = gtk.PRINT_OPERATION_ACTION_PREVIEW
+operation = Gtk.PrintOperation()
+operation.set_job_name("How printing works")
+operation.set_unit(Gtk.Unit.POINTS)
+
+operation.connect("begin-print", document.on_begin_print)
+operation.connect("draw-page", document.on_draw_page)
+operation.connect("end-print", document.on_end_print)
+
+result = operation.run(Gtk.PrintOperationAction.PRINT_DIALOG, window)
 ```
 
-Next an instance of the gtk.PaperSize class is created with a paper type of gtk.PAPER\_NAME\_A4 and is assigned to the variable `paper_size`. After this an instance of gtk.PageSetup is created and has a page size set by the just created instance of gtk.PaperSize `paper_size`.
+`run()` takes what to do and a parent window:
 
-The print operation instance is assigned to the variable print\_ using the gtk.PrintOperation class. It uses the print setup created above and sets the unit size to millimeters.
+- `PRINT_DIALOG` — ask the user, then print.
+- `PRINT` — print with the current settings, no dialog.
+- `PREVIEW` — open the preview.
+- `EXPORT` — write a file, no dialog and no printer. Needs
+  `set_export_filename()` first.
+
+and returns `APPLY` if the job went ahead, `CANCEL` if the user backed out,
+`IN_PROGRESS` for an asynchronous job, or `ERROR`. Check for `ERROR` — a print job
+can fail for reasons that have nothing to do with your code.
+
+### One line you need before any of it works {#foreign-cairo}
 
 ```python
-    print_.set_default_page_setup(setup)
-    print_.set_unit(gtk.UNIT_MM)
+gi.require_foreign("cairo")
 ```
 
-It then connects the signals needed to print to their methods in the PrintExample class. The needed signals are `begin_print` and `draw_page`. The begin\_print signal calls a method that sets up the needed information for the print operation. The `draw_page` signal calls a method that uses the the information from the `begin_print` method to print each individual page.
+`context.get_cairo_context()` converts a C `cairo_t` into a `cairo.Context`, and
+that conversion lives in a separate PyGObject module — `python3-gi-cairo` on
+Debian and Ubuntu. Without it the call fails with
+
+```text
+TypeError: Couldn't find foreign struct converter for 'cairo.Context'
+```
+
+**inside your draw handler**, where GTK swallows the exception, prints it, and
+carries on producing blank pages. `gi.require_foreign("cairo")` moves the failure to
+the top of the file where it is obvious. It is worth adding to anything that draws.
+
+## Exporting a PDF {#export}
+
+The quickest way to develop printing code is not to print. Export instead:
 
 ```python
-    print_.connect("begin_print", self.begin_print)
-    print_.connect("draw_page", self.draw_page)
+operation = Gtk.PrintOperation()
+operation.set_n_pages(3)
+operation.set_unit(Gtk.Unit.POINTS)
+operation.set_export_filename("print-to-pdf.pdf")
+operation.connect("draw-page", on_draw_page)
+
+result = operation.run(Gtk.PrintOperationAction.EXPORT, None)
 ```
 
-Lastly, if the print action is to export it also sets the filename that it is to be exported.
+No dialog, no printer, no window — the parent can be `None`. Nothing about the
+drawing changes when a real printer is involved later, so this is also how the
+examples in this chapter are tested and how the figure below was made.
 
-As stated above the begin\_print method is called with the begin\_print signal and will setup the information that is needed to print using the draw\_page method.
+It doubles as a feature. "Export as PDF" is worth having in any program that can
+print, and it costs one enum.
+
+## Drawing a page {#draw-page}
 
 ```python
-def begin_print(self, operation, context):
-  width = context.get_width()
-  height = context.get_height()
-  self.layout = context.create_pango_layout()
-
-  self.layout.set_font_description(
-      pango.FontDescription("Sans " + str(self.font_size)) )
-  self.layout.set_width(int(width*pango.SCALE))
-  self.layout.set_text(self.text)
-
-  num_lines = self.layout.get_line_count()
-  self.lines_per_page = math.floor(
-      context.get_height() / (self.font_size/2) )
-  pages = ( int(math.ceil( float(num_lines) /
-      float(self.lines_per_page) ) ) )
-  operation.set_n_pages(pages)
+def on_draw_page(_operation, context, page_number):
+    cr = context.get_cairo_context()
+    width = context.get_width()
+    height = context.get_height()
 ```
 
-The begin\_print method has the arguments *operation* and *context*. The operation argument will be used to set the number of pages. The context is used to get the information needed and create a pango layout. Pango is the part of gtk that is used for fonts and is needed for setting the font type, setting the width of the page and setting the text.
+The context has already been set up for you, and the three details that follow from
+that are the ones people get wrong:
 
-The the first two lines retrieve the width and the height of the of the context argument (which is a cairo context). It then creates a pango instance using the context.create\_pango\_layout() method and assigns this to the class instance variable self.layout from this point out obviously become a pango.Layout instance.
+**The origin is the printable area, not the paper.** Margins are already
+subtracted, so `(0, 0)` is the top left of the area you may draw in, and
+`get_width()` and `get_height()` are that area's size. Drawing at negative
+coordinates to "reach the edge" is not how you get a full-bleed page — that is
+`set_use_full_page(True)`.
 
-The next part now uses self.layout to set the font type to Sans 12. The self.font\_size is set as a class instance variable in the \_\_init\_\_ method so that it can be used from both the begin\_print and draw\_page methods. It sets the self.layout with to the cairo *context* width multiplied by the pango.SCALE constant (1024). After this the text of the pango layout is then set to the text that is held in the variable self.text; which was set in the \_\_init\_\_ method.
+**The units are what you asked for.** `set_unit(Gtk.Unit.POINTS)` gives points,
+72 to the inch, which is what Cairo and Pango both think in. `Gtk.Unit.MM` and
+`Gtk.Unit.INCH` are there if your layout is specified in physical units.
+The default, `Gtk.Unit.NONE`, gives device units — pixels at the printer's
+resolution — which will be 600 dpi on a laser printer and make a 12-point font
+microscopic.
 
-The number of lines in the whole document is retrieved with by calling self.layout.get\_line\_count(). The number of lines per page is calculated using the context height and dividing by the font size. The font size is divided by two so the lines are not spaced to far apart[^1].
+**The resolution is not the screen's.** `context.get_dpi_x()` tells you the real
+figure. For text, do not do this arithmetic at all: use
+`context.create_pango_layout()`, which returns a layout already set up for the
+printer's resolution.
 
-The number pages is calculated by dividing the number of lines in the whole document by the number of lines per page. It then sets the number pages by calling the operation.set\_n\_pages method.
-
-The draw\_page method is called directly after the begin\_print method. It uses the information that was stored in class instance variables and in the operation argument to print each page. It also has the argument page\_number. This holds the current page number that is being printed. Remember that the draw\_page method is not called once, it is called once for each page that is to be printed.
+Text on a page is Pango, exactly as in the drawing chapter:
 
 ```python
-def draw_page (self, operation, context, page_number):
-  cr = context.get_cairo_context()
-  cr.set_source_rgb(0, 0, 0)
-  start_line = page_number * self.lines_per_page
-  if page_number + 1 != operation.props.n_pages:
-    end_line = start_line + self.lines_per_page
-  else:
-    end_line = self.layout.get_line_count()
+title = context.create_pango_layout()
+title.set_font_description(Pango.FontDescription("Sans Bold 14"))
+title.set_text(f"Quarterly report — page {page_number + 1}", -1)
+cr.move_to(0, 0)
+PangoCairo.show_layout(cr, title)
 
-  cr.move_to(0, 0)
-  iter = self.layout.get_iter()
-  i=0
-  while 1:
-    if i > start_line:
-      line = iter.get_line()
-      cr.rel_move_to(0, self.font_size/2)
-      cr.show_layout_line(line)
-    i += 1
-    if not (i < end_line and iter.next_line()):
-      break
+_, title_height = title.get_pixel_size()
+cr.move_to(0, height - footer_height)      # position the footer from the bottom
 ```
 
-First off the draw\_page method creates a cairo context by calling context.get\_cairo\_context(). The context is assigned to cr. It then sets the color of the text to black using cr.set\_source\_rgb(0, 0, 0). After this the starting line for the current page to print is calculated by multiplying the current page by the number of lines per page.
+![A page produced by the export example](images/gtk4-printing/printed-page.png){: #fig-printed-page width="45%"}
 
-It then calculates the last line that is on the page. If it is not the last page of the document the last line is the start line plus the lines per page. If it is the last page to be printed the end line is the line count of the whole document.
+The full example is `examples/gtk4/printing/print-to-pdf.py`.
+
+## Pagination {#pagination}
+
+You cannot count pages before you know the paper size, and you do not know the
+paper size until the user has chosen one. That is what `begin-print` is for:
 
 ```python
-if page_number + 1 != operation.props.n_pages:
-  end_line = start_line + self.lines_per_page
-else:
-  end_line = self.layout.get_line_count()
+def on_begin_print(self, operation, context):
+    layout = context.create_pango_layout()
+    layout.set_font_description(FONT)
+    layout.set_text("Ag", -1)
+    _, self.line_height = layout.get_pixel_size()
+
+    usable = context.get_height() - self.line_height * 3    # header and footer
+    self.lines_per_page = max(1, int(usable // self.line_height))
+
+    pages = -(-len(TEXT) // self.lines_per_page)            # ceiling division
+    operation.set_n_pages(pages)
 ```
 
-With this information the method is now able to draw the text using cairo. The context is set to the upper most left part of the page using *cr.move\_to(0, 0)*.
+Measure a representative string to get a line height rather than assuming one from
+the point size — the two are not the same, and the difference accumulates down a
+page.
 
-It creates an iter of the layout that is used to iterate through each line of the document that is left. A while loop is used to move through the lines. Each time through the while loop the variable i is incremented. Once I is greater than the start line, that was calculated for this page, the line is retrieved using `iter.get_line()`. The context is moved relative to its current position by the font size divided by two. Then the text is drawn to the context using the cr.show\_layout\_line method.
+Whatever `begin-print` measures has to be kept for `draw-page` to use, which is why
+the example puts both on a small `Document` object rather than in globals. Each job
+gets its own.
 
-Once the variable is as incremented to a greater value then the end line, or there are no more lines in the iter to iterate through, break is called ending the while loop and exiting the draw\_page method.
+Fixed line heights are a simplification. Real pagination has to measure each
+paragraph, keep a heading with the text under it, and avoid leaving one line of a
+paragraph stranded at the bottom of a page. Pango can tell you all of that —
+`layout.get_iter()` walks a layout line by line — but the shape of the job does not
+change.
 
-## Print Actions {#sub-cario-print-actions}
+If pagination is genuinely expensive, `set_n_pages(-1)` in `begin-print` and use the
+`paginate` signal instead: GTK calls it repeatedly, you do a little work each time
+and return `False` until you are finished, and the interface stays responsive.
 
-There are several print actions that can be used with printing.
+## Page setup and settings {#settings}
 
-gtk.PRINT\_OPERATION\_ACTION\_PREVIEW
-: Show the print preview
+Two objects carry the user's choices, and they are different things:
 
-gtk.PRINT\_OPERATION\_ACTION\_EXPORT
-: Export to a file. This requires the "export-filename" property to be set
+`Gtk.PageSetup`
+: The paper: size, orientation, margins. Changed with the page setup dialog.
 
-gtk.PRINT\_OPERATION\_ACTION\_PRINT\_DIALOG
-: Show the print dialog
+`Gtk.PrintSettings`
+: The job: which printer, how many copies, duplex, quality, page range.
 
-gtk.PRINT\_OPERATION\_ACTION\_PRINT
-: Start printing immediately without showing the print dialog. Based on the current print settings.
+```python
+self.page_setup = Gtk.print_run_page_setup_dialog(self, self.page_setup, self.settings)
 
-## Paper Sizes {#sub-cario-paper-sizes}
+operation.set_default_page_setup(self.page_setup)
+operation.set_print_settings(self.settings)
+operation.set_embed_page_setup(True)     # let the print dialog change it too
+```
 
-There are several different predefined paper sizes that can be used with PyGTK printing. These are listed below. There is also the possibility to use a custom paper size, but this is not discussed here.
+`Gtk.print_run_page_setup_dialog()` blocks and hands back a **new** page setup —
+it does not modify the one you passed in, so assign the result.
 
-gtk.PAPER\_NAME\_A3
-: Name for the A3 paper size.
+Keep both between jobs, or every print starts from scratch:
 
-gtk.PAPER\_NAME\_A4
-: Name for the A4 paper size.
+```python
+if result == Gtk.PrintOperationResult.APPLY:
+    self.settings = operation.get_print_settings()
+```
 
-gtk.PAPER\_NAME\_A5
-: Name for the A5 paper size.
+To remember them between *runs* of the program, both objects serialise to a key
+file:
 
-gtk.PAPER\_NAME\_B5
-: Name for the B5 paper size.
+```python
+settings.to_file(path)
+settings = Gtk.PrintSettings.new_from_file(path)
+```
 
-gtk.PAPER\_NAME\_LETTER
-: Name for the Letter paper size.
+`Gtk.PaperSize` knows the standard sizes by name — `Gtk.PAPER_NAME_A4`,
+`Gtk.PAPER_NAME_LETTER` — and `Gtk.PaperSize.get_default()` picks the right one
+for the user's locale. Hard-coding either A4 or Letter is a good way to annoy half
+your users.
 
-gtk.PAPER\_NAME\_EXECUTIVE
-: Name for the Executive paper size.
+The full example is `examples/gtk4/printing/print-a-document.py`.
 
-gtk.PAPER\_NAME\_LEGAL
-: for the Legal paper size.
+## Under a sandbox {#portal}
+
+Inside Flatpak your process cannot see CUPS. It does not have to:
+`Gtk.PrintOperation` is routed through the **print portal**, which shows the
+dialog outside the sandbox and takes the finished document back. The code is
+identical and there is nothing to add.
+
+The one visible difference is that a job may complete asynchronously, so `run()`
+can return `IN_PROGRESS`. Connect to `done` if you need to know when it actually
+finished:
+
+```python
+operation.connect("done", lambda op, result: print("finished:", result))
+```
 
 ## Summary
 
-In summary, printing using cairo sucks but at least it is not to bad.
+- `Gtk.PrintOperation` runs the job: `begin-print` counts the pages, `draw-page`
+  draws each one, `end-print` cleans up.
+- `gi.require_foreign("cairo")` at the top, or `get_cairo_context()` fails inside
+  your handler and prints blank pages.
+- Export to PDF while developing: it needs no printer, no dialog and no window, and
+  the drawing code is identical.
+- The context's origin is the printable area, and `set_unit(Gtk.Unit.POINTS)` is
+  almost always the unit you want.
+- Use `context.create_pango_layout()` for text — it is already at the printer's
+  resolution.
+- `Gtk.PageSetup` is the paper, `Gtk.PrintSettings` is the job. Keep both between
+  jobs, and save them to a file to keep them between runs.
 
-[^1]: There is a different way to do this but I found this the easiest way to start off with.
+[Desktop Integration](05-desktop-integration.html) is next: settings, desktop
+files, portals and the rest of making a program part of the desktop rather than a
+window floating on it.
