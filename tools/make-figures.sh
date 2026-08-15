@@ -20,7 +20,6 @@ figures=(
   "examples/gtk4/cairo/text-with-pango.py:text-with-pango.png:gtk4-cairo"
   "examples/gtk4/cairo/antialias.py:antialias.png:gtk4-cairo"
   "examples/gtk4/cairo/draw-to-png.py:draw-to-png.png:gtk4-cairo"
-  "examples/gtk4/cairo/surfaces.py:surfaces.png:gtk4-cairo"
 )
 
 for entry in "${figures[@]}"; do

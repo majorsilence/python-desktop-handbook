@@ -1,25 +1,95 @@
 ---
 layout: chapter
-title: "Bibliography"
+title: "Further Reading"
 number: 99
 backmatter: true
+unnumbered: true
 ---
 
-- <a id="bib-key-1"></a>2006-03-02, John Finlay, Version 2.5, PyGTK 2.0 Tutorial, <http://pygtk.org/pygtk2tutorial/>
-- <a id="bib-key-7"></a>2007-07-31, <http://www.cairographics.org/pycairo/tutorial/>
-- <a id="bib-key-3"></a>Accessed 2008-08-31,Michael Urman, <http://www.tortall.net/mu/wiki/CairoTutorial>
-- <a id="bib-key-4"></a>Accessed 2008-08-31,Michael Urman,<http://www.tortall.net/mu/wiki/PyGTKCairoTutorial>
-- <a id="bib-key-5"></a>Accessed 2008-08-31, Lawrence Oluyede,<http://pygtk.org/articles/cairo-pygtk-widgets/cairo-pygtk-widgets.htm>
-- <a id="bib-key-6"></a><http://pygtk.org/articles/cairo-pygtk-widgets/cairo-pygtk-widgets2.htm>
-- <a id="bib-key-9"></a><http://www.mono-project.com/FAQ:_Gtk#Should_I_hook_up_to_events.2C_or_override_methods_to_create_a_custom_widget.3F>
-- <a id="bib-key-10"></a>2008-04-16, <http://blog.sontek.net/2008/04/16/printing-in-gtk/>
-- <a id="bib-key-11"></a>2008-04-15, John Anderson, PyGTK 2.0 Reference Manual <http://pygtk.org/docs/pygtk/>
-- <a id="bib-key-16"></a>Accessed 2008-08-31, Cairo 1.6.5 API Reference Manual<http://www.cairographics.org/manual/cairo-Image-Surfaces.html>
-- <a id="bib-key-19"></a><http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s05.html>
-- <a id="bib-key-20"></a><http://standards.freedesktop.org/menu-spec/menu-spec-1.0.html>
-- <a id="bib-key-21"></a><http://pygstdocs.berlios.de/pygst-tutorial/seeking.html>
-- <a id="bib-key-22"></a><http://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/GstElement.html>
-- <a id="bib-key-23"></a>2008-01-23, Thomas Heller, Internet Explorer with PyGTK, <http://www.mail-archive.com/comtypes-users@lists.sourceforge.net/msg00084.html>
-- <a id="bib-key-27"></a>2007-09-23, Giuliani Vito Ivan, <http://zeta-puppis.com/2007/09/23/an-introduction-to-pyclutter-part-one/>
-- <a id="bib-key-2"></a>Accessed 2009-02-18, gettext - Multilingual internationalization services, <http://docs.python.org/library/gettext.html>
-- <a id="bib-key-3-2"></a>Accessed 2009-02-18, learningpython.com,<http://www.learningpython.com/2006/12/03/translating-your-pythonpygtk-application/>
+The previous edition's bibliography was a list of tutorials from 2006 to 2009.
+Almost every one of them is now either offline or describes a library that no
+longer exists, so it has been replaced with the places worth reading today.
+
+The single most useful habit: when something in this book disagrees with the API
+reference, the API reference is right and this book is out of date.
+
+## Reference documentation
+
+The API references
+: <https://docs.gtk.org/> — GTK 4, GDK, GSK, Gio, GLib, GObject and Pango, all
+  generated from the same sources as the C documentation and kept current.
+
+PyGObject
+: <https://pygobject.gnome.org/> — the binding itself: how introspection maps C
+  onto Python, what `gi.require_version` does, and the awkward corners
+  (`GObject.Property`, closures, threading).
+
+libadwaita
+: <https://gnome.pages.gitlab.gnome.org/libadwaita/doc/> — every `Adw` widget used
+  in Part I, with pictures.
+
+The freedesktop specifications
+: <https://specifications.freedesktop.org/> — the desktop entry format, the icon
+  naming specification, the base directory specification and the menu
+  specification. Dry, short, and the authority when something will not appear in
+  a launcher.
+
+## Guidance rather than API
+
+The GNOME Human Interface Guidelines
+: <https://developer.gnome.org/hig/> — when to use a switch and when a check
+  button, how a dialog should be worded, what a header bar is for. Worth reading
+  once end to end; it explains a lot of why GTK 4 removed things.
+
+The GNOME Developer Documentation
+: <https://developer.gnome.org/documentation/> — tutorials and "how do I" material
+  above the level of the API reference, including the parts of application
+  development this book covers in Part I.
+
+## Things to read the source of
+
+GTK 4 Demo and GTK 4 Widget Factory
+: Installed with the GTK development packages as `gtk4-demo` and
+  `gtk4-widget-factory`. `gtk4-demo` shows its own source for every example, which
+  makes it the fastest answer to "how is this widget actually used". `gtk4-demo`
+  is C, but the API is the same API.
+
+Adwaita Demo
+: `adwaita-1-demo`, the same idea for libadwaita.
+
+GNOME applications in Python
+: Reading a finished application teaches the parts a book leaves out — how a real
+  project lays out its Meson build, its resources and its state. Most GNOME
+  applications are hosted at <https://gitlab.gnome.org/GNOME/>.
+
+## Tools worth having installed
+
+`gtk4-icon-browser`
+: Searchable index of every icon in the theme. See [Icon Names](94-icon-names.html).
+
+The GTK Inspector
+: `GTK_DEBUG=interactive python3 app.py`. A live widget tree, a CSS editor that
+  applies as you type, and a way to see which widget is actually receiving your
+  events.
+
+`gdbus`, `busctl`, D-Spy
+: For looking at the session bus before writing anything against it. See
+  [D-Bus](07-dbus.html).
+
+`gst-launch-1.0`, `gst-inspect-1.0`
+: For prototyping a pipeline in seconds rather than minutes. See
+  [Audio and Video with GStreamer](06-multimedia-gstreamer.html).
+
+`flatpak-builder`
+: For building the manifest in
+  [Packaging and Distribution](11-packaging.html).
+
+## Where the previous edition went
+
+This book began as *PyGTK Notebook*, covering PyGTK and GTK 2 between 2008 and
+2012. That material is preserved in the git history of this repository, and the
+last PDF built from the original LyX source is at
+<http://files.majorsilence.com/pygtkbook/pygtk-notebook-latest-0.13.pdf>.
+
+If you are porting something written against it, start with
+[Migrating from PyGTK](92-migrating-from-pygtk.html).
