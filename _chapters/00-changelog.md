@@ -13,35 +13,35 @@ Version 0.13 October 9, 2012
 
 *23 Dec 2008*
 
-- Added Secton on Widgets - [Widgets - What are they?](01-pygtk-introduction.html#sub-widgets-what-are-they)
-- Added Section on First PyGTK Application - [Creating your first PyGTK application](01-pygtk-introduction.html#sub-creating-your-first-pygtk-application)
-- Added Section on Layout Boxes - [Layout - Boxes](01-pygtk-introduction.html#sub-layout-boxes)
+- Added Secton on Widgets - [Widgets - What are they?](01-getting-started.html)
+- Added Section on First PyGTK Application - [Creating your first PyGTK application](01-getting-started.html)
+- Added Section on Layout Boxes - [Layout - Boxes](01-getting-started.html)
 
 ### Version 0.04
 
-- Added Section on Callbacks - [Callbacks - Reacting to program events](01-pygtk-introduction.html#sub-callbacks-reacting-to-program-events)
-- Added PyGTK on Windows - [PyGTK and Windows](14-pygtk-and-windows.html#sec-appendix-pygtk-and-windows)
+- Added Section on Callbacks - [Callbacks - Reacting to program events](01-getting-started.html)
+- Added PyGTK on Windows - PyGTK and Windows
 
 ### Version 0.05
 
-- Added Section on PyGObject (only talks about gobject.timeout\_add) - [PyGobject](05-gnome-desktop-integration.html#sec-pygobject)
-- Added Section on Labels - [Labels](01-pygtk-introduction.html#sub-widgets-labels)
-- Added Section on Check Buttons - [Check Buttons](01-pygtk-introduction.html#sub-widgets-check-buttons)
+- Added Section on PyGObject (only talks about gobject.timeout\_add) - [PyGobject](05-desktop-integration.html#sec-pygobject)
+- Added Section on Labels - [Labels](01-getting-started.html)
+- Added Section on Check Buttons - [Check Buttons](01-getting-started.html)
 
 ### Version 0.06
 
 *12 Feb 2009*
 
-- Added code example for gstreamer codec installer - [Codec Buddy - Auto install multimedia Codecs](06-audio-and-video-playback-gstreamer.html#sec-gst-codec-buddy)
-- Added Section on Buttons - [Buttons](01-pygtk-introduction.html#sub-widgets-buttons)
-- Added Section on Radio Buttons - [Radio Buttons](01-pygtk-introduction.html#sub-widgets-radiobutton)
-- Added Section on Toggle Buttons - [Toggle Buttons](01-pygtk-introduction.html#sub-widgets-toggle-buttons)
-- Added Section on Text Entry - [Text Entries](01-pygtk-introduction.html#sub-widgets-text-entries)
+- Added code example for gstreamer codec installer - [Codec Buddy - Auto install multimedia Codecs](06-multimedia-gstreamer.html#sec-gst-codec-buddy)
+- Added Section on Buttons - [Buttons](01-getting-started.html)
+- Added Section on Radio Buttons - [Radio Buttons](01-getting-started.html)
+- Added Section on Toggle Buttons - [Toggle Buttons](01-getting-started.html)
+- Added Section on Text Entry - [Text Entries](01-getting-started.html)
 
 ### Version 0.07
 
-- Added Section on MessageDialog - [Message Dialogs](01-pygtk-introduction.html#sub-widgets-messagedialog)
-- Added Section on Statusbar - [Statusbar](01-pygtk-introduction.html#sub-widgets-statusbar)
+- Added Section on MessageDialog - [Message Dialogs](01-getting-started.html)
+- Added Section on Statusbar - [Statusbar](01-getting-started.html)
 
 ### Version 0.08
 
@@ -60,7 +60,7 @@ Version 0.13 October 9, 2012
 
 ### Version 0.11
 
-- Clarify what widgets are compared to .NET winforms [Widgets - What are they?](01-pygtk-introduction.html#sub-widgets-what-are-they)
+- Clarify what widgets are compared to .NET winforms [Widgets - What are they?](01-getting-started.html)
 
 ### Version 0.12
 
@@ -68,4 +68,4 @@ Version 0.13 October 9, 2012
 
 ### Version 0.13
 
-- Fixed added notes about using math.degrees and math.radians [Radians and Degrees](03-cairo.html#sub-radians-and-degrees)
+- Fixed added notes about using math.degrees and math.radians [Radians and Degrees](03-drawing-with-cairo.html#sub-radians-and-degrees)

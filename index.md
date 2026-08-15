@@ -3,11 +3,13 @@ layout: home
 title: Contents
 ---
 
-The PyGTK Notebook started life as a personal collection of notes and sample
-programs, kept in one place so its author would not have to rediscover the same
-answers twice. It grew into a book about PyGTK and the desktop technologies that
-surround it — Cairo graphics, GStreamer multimedia, Clutter animation, DBus,
-printing, internationalization and Gnome integration.
+This book is a working notebook for writing desktop applications in Python. It
+covers two toolkits in parallel — GTK 4 with PyGObject, and Qt 6 with PySide6 —
+and the technologies around them: drawing, printing, multimedia, D-Bus, embedded
+web content, translation and packaging.
 
-Everything here targets GTK 2 and the original `pygtk` bindings. Bringing it up
-to GTK 3/4 and PyGObject is work in progress.
+Every listing is a real file under `examples/`, and every example is started on
+each build, so the code in these pages is code that runs.
+
+It began as one person's notes on PyGTK and GTK 2. That edition is still in the
+git history; this one is being rewritten from it, chapter by chapter.

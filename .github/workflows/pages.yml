@@ -17,6 +17,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  examples:
+    name: Smoke-test the examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolkits
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi python3-gi-cairo python3-cairo \
+            gir1.2-gtk-4.0 gir1.2-adw-1 \
+            gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            xvfb
+          pip install PySide6
+
+      - name: Start every example and shut it down again
+        env:
+          GTK_A11Y: none
+          GSK_RENDERER: cairo
+          QT_QPA_PLATFORM: offscreen
+        run: xvfb-run -a python3 tools/smoke-test.py examples/gtk4
+
   pdf:
     name: Build PDF
     runs-on: ubuntu-latest
@@ -30,12 +54,12 @@ jobs:
             pandoc texlive-xetex texlive-fonts-recommended texlive-latex-extra
 
       - name: Build the PDF
-        run: ./tools/build-pdf.sh --output build/pygtk-notebook.pdf
+        run: ./tools/build-pdf.sh --output build/python-desktop-notebook.pdf
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pygtk-notebook-pdf
-          path: build/pygtk-notebook.pdf
+          name: python-desktop-notebook-pdf
+          path: build/python-desktop-notebook.pdf
           if-no-files-found: error
 
   site:
@@ -56,7 +80,7 @@ jobs:
       - name: Collect the PDF built above
         uses: actions/download-artifact@v4
         with:
-          name: pygtk-notebook-pdf
+          name: python-desktop-notebook-pdf
           path: .
 
       - name: Build with Jekyll
@@ -68,7 +92,7 @@ jobs:
             --destination _site
 
       - name: Publish the PDF alongside the site
-        run: cp pygtk-notebook.pdf _site/pygtk-notebook.pdf
+        run: cp python-desktop-notebook.pdf _site/python-desktop-notebook.pdf
 
       - uses: actions/upload-pages-artifact@v3
         with:

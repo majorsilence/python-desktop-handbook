@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Build the PyGTK Notebook PDF from the Markdown chapters.
+# Build the book's PDF from the Markdown chapters.
 #
-# The output aims to match what LyX used to produce: LaTeX `book` class, 10pt,
-# two-sided, custom 20.95cm x 27.31cm paper, numbered chapters with an appendix,
-# a table of contents and a list of figures, and coloured hyperlinks.
+# The output keeps the shape the LyX original had: LaTeX `book` class, 10pt,
+# two-sided, custom 20.95cm x 27.31cm paper, parts and numbered chapters with an
+# appendix, a table of contents and a list of figures, and coloured hyperlinks.
 #
 # Requires: pandoc, and a LaTeX engine (xelatex by default, pdflatex works too).
 #
-#   ./tools/build-pdf.sh                    # -> build/pygtk-notebook.pdf
+#   ./tools/build-pdf.sh                    # -> build/python-desktop-notebook.pdf
 #   ./tools/build-pdf.sh -o out/book.pdf    # somewhere else
 #   PDF_ENGINE=pdflatex ./tools/build-pdf.sh
 #
@@ -17,7 +17,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-output="build/pygtk-notebook.pdf"
+output="build/python-desktop-notebook.pdf"
 while [ $# -gt 0 ]; do
   case "$1" in
     -o|--output) output="$2"; shift 2 ;;
@@ -65,6 +65,13 @@ import sys
 
 out = open(sys.argv[1], "w", encoding="utf-8")
 appendix_started = False
+current_part = None
+
+# Part titles live in _config.yml so the site and the PDF agree on them.
+config = open("_config.yml", encoding="utf-8").read()
+part_titles = {}
+for block in re.finditer(r"^  - number: (\d+)\n    title: (.+)$", config, re.M):
+    part_titles[block.group(1)] = block.group(2).strip().strip('"')
 
 def unnumber_headings(body):
     """Add pandoc's .unnumbered class to every heading, skipping fenced code."""
@@ -113,17 +120,25 @@ for path in sorted(glob.glob("_chapters/*.md")):
     if meta.get("unnumbered") == "true":
         body = unnumber_headings(body)
 
+    part = meta.get("part")
+    if part and part != current_part:
+        current_part = part
+        title = part_titles.get(part, f"Part {part}")
+        out.write("```{=latex}\n\\part{%s}\n```\n\n" % title)
+
     if meta.get("appendix") == "true" and not appendix_started:
         appendix_started = True
         out.write("```{=latex}\n\\appendix\n```\n\n")
 
-    attrs = []
-    if meta.get("anchor"):
-        attrs.append("#" + meta["anchor"])
+    # The chapter heading is identified by its file stem, so whole-chapter links
+    # ("](02-more-gtk4.html)" -> "](#02-more-gtk4)") land on it.
+    attrs = ["#" + stem]
     if meta.get("unnumbered") == "true":
         attrs.append(".unnumbered")
-    suffix = " {" + " ".join(attrs) + "}" if attrs else ""
-    out.write(f"# {meta.get('title', os.path.basename(path))}{suffix}\n\n")
+    out.write(f"# {meta.get('title', os.path.basename(path))} {{{' '.join(attrs)}}}\n\n")
+    if meta.get("anchor"):
+        # A second name for the same place, kept from the LyX cross references.
+        out.write(f"[]{{#{meta['anchor']}}}\n\n")
     out.write(body.rstrip() + "\n\n")
 
 out.close()

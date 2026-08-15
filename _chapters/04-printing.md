@@ -2,9 +2,12 @@
 layout: chapter
 title: "Printing"
 number: 4
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 A requirement for printing with PyGTK is cairo so it will be helpful to read the chapter on cairo first. However it is only necessary if you wish to know what is going on. If all you want is quick and easy printing than this chapter by itself should suffice.
 

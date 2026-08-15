@@ -1,10 +1,13 @@
 ---
 layout: chapter
-title: "Cairo"
+title: "Drawing with Cairo"
 number: 3
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 ## Introduction
 
@@ -52,7 +55,7 @@ Next, using the contexts move\_to method moves the position of the brush to the 
 
 Using the contexts `line_to` method will draw a line from the current position, that was specified with the move\_to method, to the new position specified with the line\_to method. To display what has been drawn with the `line_to` method the contexts *stroke* method must be called. Once `context.stroke()` is called then the lines are actually applied to the surface.
 
-See figure [Two Straight Lines](03-cairo.html#fig-cairo-two-striaght-lines) to see what the output should look like.
+See figure [Two Straight Lines](03-drawing-with-cairo.html#fig-cairo-two-striaght-lines) to see what the output should look like.
 
 ![Two Straight Lines](images/cairo/cairo-draw-line1.png){: #fig-cairo-two-striaght-lines width="50%"}
 
@@ -90,7 +93,7 @@ cairo.SVGSurface("drawings.svg", WIDTH, HEIGHT)
 
 ## Drawing Context
 
-As discussed above, a context is what allows the programmer to use the cairo surface. This section will discover different uses of the context class by making use of several different examples. For a list of the context methods used in this section please skip ahead to [Context Methods](03-cairo.html#sub-cairo-context-methods).
+As discussed above, a context is what allows the programmer to use the cairo surface. This section will discover different uses of the context class by making use of several different examples. For a list of the context methods used in this section please skip ahead to [Context Methods](03-drawing-with-cairo.html#sub-cairo-context-methods).
 
 ### Paths: Lines, Curves, Arcs
 
@@ -161,7 +164,7 @@ def draw_circle(context=None):
 
 The draw\_circle function introduces the a new method; *arc*.
 
-The start\_angle and stop\_angle are specified in radians. If you do not know how to work with radians take a look at section [Radians and Degrees](03-cairo.html#sub-radians-and-degrees). Here the start angle is set to 0. The stop\_angle is set to 2 * math.pi, which is 360 degrees. This arc therefore forms a full circle.
+The start\_angle and stop\_angle are specified in radians. If you do not know how to work with radians take a look at section [Radians and Degrees](03-drawing-with-cairo.html#sub-radians-and-degrees). Here the start angle is set to 0. The stop\_angle is set to 2 * math.pi, which is 360 degrees. This arc therefore forms a full circle.
 
 Other parts of the arc method is the x and y coordinate positions for the center of the arc. After the x and y coordinates come the radius of the arc.
 
@@ -232,7 +235,7 @@ context = cairo.Context(surface)
 context.set_source_rgb(0.0, 0.0, 0.0) # set to black
 ```
 
-What is then needed is to set the type of font and its size. Here a Monospace font is set with a normal slant and is set to be bold (see section [Font Styles](03-cairo.html#sub-cairo-font-styles) for more styles). The size of the font is set to 50.
+What is then needed is to set the type of font and its size. Here a Monospace font is set with a normal slant and is set to be bold (see section [Font Styles](03-drawing-with-cairo.html#sub-cairo-font-styles) for more styles). The size of the font is set to 50.
 
 ```python
 context.select_font_face("Monospace", cairo.FONT_SLANT_NORMAL,
@@ -272,7 +275,7 @@ First lets define antialias so there is no confusion.
 Antialias
 : Is the technique of minimizing the distortion artifacts created while drawing.
 
-But what does this mean? Basically nothing if a straight line is being drawn. However if a curve or arc is being drawn it will look distorted or jagged, not very smooth at all. However with antialiasing turned on it will look smooth by setting the color correctly around the edges. The best way to understand this is to view an image. Take a look at figure [Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](03-cairo.html#fig-cairo-antialias-example) and see if you can tell the difference.
+But what does this mean? Basically nothing if a straight line is being drawn. However if a curve or arc is being drawn it will look distorted or jagged, not very smooth at all. However with antialiasing turned on it will look smooth by setting the color correctly around the edges. The best way to understand this is to view an image. Take a look at figure [Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](03-drawing-with-cairo.html#fig-cairo-antialias-example) and see if you can tell the difference.
 
 ![Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](images/cairo/cairo-antialias.png){: #fig-cairo-antialias-example}
 
@@ -312,7 +315,7 @@ if __name__ == "__main__":
   surface.write_to_png("cairo-antialias.png")
 ```
 
-To turn off antialias, the context set\_antialias method must be given the cairo.ANTIALIAS\_NONE type. To see what this looks like take a look at figure [Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](03-cairo.html#fig-cairo-antialias-example).
+To turn off antialias, the context set\_antialias method must be given the cairo.ANTIALIAS\_NONE type. To see what this looks like take a look at figure [Antialias Example - As can be seen the circle on the left uses the default cairo antialias while the circle on the left turns antialias off. As can be seen when antialias is turned off the curves become jagged/distorted.](03-drawing-with-cairo.html#fig-cairo-antialias-example).
 
 #### Antialias Types
 

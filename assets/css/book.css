@@ -150,6 +150,27 @@ main {
 
 .intro { margin-bottom: 2.5rem; }
 
+.part { margin-top: 2.75rem; }
+.part-title {
+  font-size: 1.35rem;
+  margin: 0 0 0.35rem;
+  line-height: 1.25;
+}
+.part-title span {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+.part-blurb {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+}
+
 .contents {
   list-style: none;
   margin: 0;

@@ -1,12 +1,24 @@
-title: PyGTK Notebook
-subtitle: A Journey Through Python Gnome Technologies
+title: Python Desktop Notebook
+subtitle: Building Desktop Applications with GTK 4 and Qt 6
 author: Peter Gill
 description: >-
-  An open source book covering PyGTK and the Linux desktop technologies around it:
-  Cairo graphics, GStreamer multimedia, Clutter animation, DBus, printing,
-  internationalization and Gnome desktop integration.
-version: "0.13"
+  An open source book on writing desktop applications in Python: GTK 4 with
+  PyGObject and Qt 6 with PySide6, plus the technologies around them -- drawing,
+  printing, multimedia, D-Bus, web content, translation and packaging.
+version: "1.0-draft"
 lang: en
+
+parts:
+  - number: 1
+    title: GTK 4 with PyGObject
+    blurb: >-
+      GTK 4 and libadwaita are the native toolkit of the GNOME desktop. This part
+      builds an application from a first window up to a packaged Flatpak.
+  - number: 2
+    title: Qt 6 with PySide6
+    blurb: >-
+      PySide6 is Qt's own Python binding. This part covers the same ground again,
+      so you can pick a toolkit knowing what each one asks of you.
 
 # Set by the Pages workflow; harmless locally.
 url: ""

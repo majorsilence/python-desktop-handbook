@@ -1,10 +1,13 @@
 ---
 layout: chapter
-title: "Clutter"
+title: "Animation and Transitions"
 number: 8
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 ## Introduction
 
@@ -285,7 +288,7 @@ clutter.main()
 
 ### Labels
 
-Labels have been deprecated and as of pyclutter 1.0 you they should not be used. Instead the Text actor should be used and will be demonstrated here. To see more about the Text actor please see [Text](08-clutter.html#sub-clutter-actor-text).
+Labels have been deprecated and as of pyclutter 1.0 you they should not be used. Instead the Text actor should be used and will be demonstrated here. To see more about the Text actor please see [Text](08-animation.html#sub-clutter-actor-text).
 
 ```python
 class clutter.Text
@@ -415,7 +418,7 @@ There are many predefined Clutter.Alpha functions that can be used with the clut
 
 ### BehaviourOpacity {#sub-clutter-behaviouropacity}
 
-Please see the section [Alpha](08-clutter.html#sub-clutter-alpha) before reading this section. Using Behaviour Opacity
+Please see the section [Alpha](08-animation.html#sub-clutter-alpha) before reading this section. Using Behaviour Opacity
 
 ```python
 import clutter

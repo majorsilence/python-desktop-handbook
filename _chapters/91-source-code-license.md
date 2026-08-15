@@ -1,7 +1,7 @@
 ---
 layout: chapter
-title: "Source Code Lisence"
-number: 13
+title: "Source Code License"
+number: 91
 appendix: true
 ---
 

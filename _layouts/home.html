@@ -7,8 +7,8 @@ layout: default
   <p class="tagline">{{ site.subtitle }}</p>
   <p class="byline">by {{ site.author }}</p>
   <p class="hero-actions">
-    <a class="button" href="{{ '/01-pygtk-introduction.html' | relative_url }}">Start reading</a>
-    <a class="button button-quiet" href="{{ '/pygtk-notebook.pdf' | relative_url }}">Download PDF</a>
+    <a class="button" href="{{ '/01-getting-started.html' | relative_url }}">Start reading</a>
+    <a class="button button-quiet" href="{{ '/python-desktop-notebook.pdf' | relative_url }}">Download PDF</a>
   </p>
 </div>
 
@@ -16,24 +16,64 @@ layout: default
   {{ content }}
 </div>
 
+{%- assign chapters = site.chapters | sort: "number" -%}
+
+{%- comment -%} Front matter: anything with no part and not an appendix. {%- endcomment -%}
+{%- assign front = chapters | where_exp: "c", "c.part == nil and c.appendix != true and c.backmatter != true" -%}
+{%- if front.size > 0 %}
 <ol class="contents">
-  {%- assign chapters = site.chapters | sort: "number" -%}
-  {%- assign letters = "A,B,C,D,E,F,G,H,I,J,K,L" | split: "," -%}
-  {%- assign appendix_index = 0 -%}
-  {%- for chapter in chapters %}
-  {%- if chapter.appendix and chapter.unnumbered != true -%}
-    {%- assign label = letters[appendix_index] -%}
-    {%- assign appendix_index = appendix_index | plus: 1 -%}
-  {%- elsif chapter.unnumbered -%}
-    {%- assign label = "&bull;" -%}
-  {%- else -%}
-    {%- assign label = chapter.number -%}
-  {%- endif -%}
-  <li class="contents-item{% if chapter.appendix %} is-appendix{% endif %}">
+  {%- for chapter in front %}
+  <li class="contents-item">
     <a href="{{ chapter.url | relative_url }}">
-      <span class="contents-number">{{ label }}</span>
+      <span class="contents-number">&bull;</span>
       <span class="contents-title">{{ chapter.title }}</span>
     </a>
   </li>
   {%- endfor %}
 </ol>
+{%- endif %}
+
+{%- for part in site.parts %}
+<section class="part">
+  <h2 class="part-title"><span>Part {{ part.number }}</span>{{ part.title }}</h2>
+  <p class="part-blurb">{{ part.blurb }}</p>
+  <ol class="contents">
+    {%- assign in_part = chapters | where: "part", part.number %}
+    {%- for chapter in in_part %}
+    <li class="contents-item">
+      <a href="{{ chapter.url | relative_url }}">
+        <span class="contents-number">{{ chapter.number }}</span>
+        <span class="contents-title">{{ chapter.title }}</span>
+      </a>
+    </li>
+    {%- endfor %}
+  </ol>
+</section>
+{%- endfor %}
+
+{%- assign back = chapters | where: "appendix", true -%}
+{%- assign tail = chapters | where: "backmatter", true -%}
+{%- if back.size > 0 or tail.size > 0 %}
+<section class="part">
+  <h2 class="part-title"><span>Back matter</span>Appendices &amp; references</h2>
+  <ol class="contents">
+    {%- assign letters = "A,B,C,D,E,F,G,H,I,J,K,L" | split: "," -%}
+    {%- for chapter in back %}
+    <li class="contents-item is-appendix">
+      <a href="{{ chapter.url | relative_url }}">
+        <span class="contents-number">{{ letters[forloop.index0] }}</span>
+        <span class="contents-title">{{ chapter.title }}</span>
+      </a>
+    </li>
+    {%- endfor %}
+    {%- for chapter in tail %}
+    <li class="contents-item is-appendix">
+      <a href="{{ chapter.url | relative_url }}">
+        <span class="contents-number">&bull;</span>
+        <span class="contents-title">{{ chapter.title }}</span>
+      </a>
+    </li>
+    {%- endfor %}
+  </ol>
+</section>
+{%- endif %}

@@ -2,9 +2,12 @@
 layout: chapter
 title: "Internationalization"
 number: 10
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 Must install intltool package on linux systems to provide the tools and scripts that are needed to extract the needed information from the python scripts and the programs glade files.
 
@@ -248,7 +251,7 @@ Finally the .po files must be edited and the localized language put into their p
 
 ## gtk.Builder Translation {#sec-gtk-builder-translation}
 
-Translating a project that makes use of a gtk.Builder file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)). First this file must be translated to a gtk.Builder file using the gtk-builder-convert (See section [Builder](02-more-pygtk.html#sec-gtk-builder-convert)) script.
+Translating a project that makes use of a gtk.Builder file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)). First this file must be translated to a gtk.Builder file using the gtk-builder-convert (See section [Builder](02-more-gtk4.html#sec-gtk-builder-convert)) script.
 
 ```python
 import pygtk

@@ -1,10 +1,13 @@
 ---
 layout: chapter
-title: "Dbus Interprocess Communication"
+title: "D-Bus"
 number: 7
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 ## Introduction
 
@@ -62,7 +65,7 @@ class DBusExample(object):
     self.list_available_commands()
 ```
 
-To begin with a DBus SessionBus is created. This allows connecting to other applications. If this example were connecting to a system process it would use a SystemBus. Once the bus is created, a proxy object is assigned to self.proxy\_object using the self.bus.get\_object method. The get\_object method takes as arguments the applications Bus Name([Introduction](07-dbus-interprocess-communication.html#des-busname-the-name)) and Object Path([Introduction](07-dbus-interprocess-communication.html#des-objectpath-an-application)).
+To begin with a DBus SessionBus is created. This allows connecting to other applications. If this example were connecting to a system process it would use a SystemBus. Once the bus is created, a proxy object is assigned to self.proxy\_object using the self.bus.get\_object method. The get\_object method takes as arguments the applications Bus Name([Introduction](07-dbus.html#des-busname-the-name)) and Object Path([Introduction](07-dbus.html#des-objectpath-an-application)).
 
 After the proxy\_object has been created it is used to create an interface to the available methods. The interface self.player is created using the dbus.Interface class. It is initlized with the self.proxy\_object and using the org.gnome.Rhythmbox.Player interface. This interface provides for methods to control and retrieve information on the currently playing song.
 
@@ -184,7 +187,7 @@ class DBusObject(dbus.service.Object):
 
 To expose methods for the @dbus.service.method decorator is used, specifying the DBus Interface that the method will available on and the methods in (arguments) and out (return value) signatures. Here the interface is specified as com.majorsilence.MessageInterface, so any application calling this method would have to use com.majorsilence.MessageInterface. After the decorator declare the method as normal. The method name is the same name that will be exposed.
 
-So what we end up with here is a method called display\_welcome\_message that returns a string, s meaning it is a dbus.String type (see [Types](07-dbus-interprocess-communication.html#sec-dbus-types)). As can be seen it sets the label to "Welcome to dbus" and returns the same message to the calling program.
+So what we end up with here is a method called display\_welcome\_message that returns a string, s meaning it is a dbus.String type (see [Types](07-dbus.html#sec-dbus-types)). As can be seen it sets the label to "Welcome to dbus" and returns the same message to the calling program.
 
 Moving on to the next method, it takes a string as an argument emits a signal and completion and returns nothing.
 
@@ -201,11 +204,11 @@ Moving on to the next method, it takes a string as an argument emits a signal an
     self.message_signal()
 ```
 
-As before and like all exposed DBus methods the @dbus.service.method decorator is used. This method has the same DBus Interface as the first method, com.majorsilence.MessageInterface, and an in\_signature of s meaning a dbus.String (see [Types](07-dbus-interprocess-communication.html#sec-dbus-types)).
+As before and like all exposed DBus methods the @dbus.service.method decorator is used. This method has the same DBus Interface as the first method, com.majorsilence.MessageInterface, and an in\_signature of s meaning a dbus.String (see [Types](07-dbus.html#sec-dbus-types)).
 
 The method is set\_message, it takes as an argument a string. It checks to make sure it was passed a string, if it was it will set the label to the string that was passed in. The interesting thing about this method compared to the first one is that it emits a signal on completion. It does this by calling the self.message\_signal() method as its last act.
 
-The self.message\_signal is the method that is described next. It to uses a dbus decorator, but instead of using the @dbus.service.method decorator, it uses the @dbus.service.signal decorator. What this means is that when this method is called it will emit a signal that can be caught using the add\_signal\_receiver method that was described in [Controlling Applications](07-dbus-interprocess-communication.html#sec-dbus-controlling-applications).
+The self.message\_signal is the method that is described next. It to uses a dbus decorator, but instead of using the @dbus.service.method decorator, it uses the @dbus.service.signal decorator. What this means is that when this method is called it will emit a signal that can be caught using the add\_signal\_receiver method that was described in [Controlling Applications](07-dbus.html#sec-dbus-controlling-applications).
 
 ```python
   @dbus.service.signal('com.majorsilence.MessageInterface')
@@ -249,7 +252,7 @@ Of course do not forget to call the main function that runs the the example PyGT
 
 ### Connecting to your DBus Service {#sub-dbus-connecting-to-your-dbus-service}
 
-Controlling your own application through DBus is very similiar to how the first example controlled Rhythmbox. This is a small application that will call the two exposed methods from [Creating a DBus Service](07-dbus-interprocess-communication.html#sub-dbus-creating-a-dbus-service) and handle the signal that is emitted.
+Controlling your own application through DBus is very similiar to how the first example controlled Rhythmbox. This is a small application that will call the two exposed methods from [Creating a DBus Service](07-dbus.html#sub-dbus-creating-a-dbus-service) and handle the signal that is emitted.
 
 ```python
 #!/usr/bin/env python

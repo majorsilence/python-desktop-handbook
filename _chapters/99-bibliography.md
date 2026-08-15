@@ -1,8 +1,8 @@
 ---
 layout: chapter
 title: "Bibliography"
-number: 16
-unnumbered: true
+number: 99
+backmatter: true
 ---
 
 - <a id="bib-key-1"></a>2006-03-02, John Finlay, Version 2.5, PyGTK 2.0 Tutorial, <http://pygtk.org/pygtk2tutorial/>

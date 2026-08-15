@@ -1,10 +1,13 @@
 ---
 layout: chapter
-title: "More PyGTK"
+title: "More GTK 4"
 number: 2
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 ## Drag and Drop
 
@@ -717,19 +720,19 @@ After and under the Containers are the Control and Display widgets, they contain
 - Raido Button (gtk.RadioButton)
 - etc...
 
-To create a simple application, from the Toplevels select and add a Window. Next select a Horizontal Box and add it to the Window. When prompted for how many items, select two. When this is done the window will be split in half horizontally with a line going down through the center (see figure [Basic Glade User Interface Designer](02-more-pygtk.html#fig-basic-glade-user-interface)). Each of these can hold a widget.
+To create a simple application, from the Toplevels select and add a Window. Next select a Horizontal Box and add it to the Window. When prompted for how many items, select two. When this is done the window will be split in half horizontally with a line going down through the center (see figure [Basic Glade User Interface Designer](02-more-gtk4.html#fig-basic-glade-user-interface)). Each of these can hold a widget.
 
 ![Basic Glade User Interface Designer](images/more-pygtk/Screenshot-glade-example.png){: #fig-basic-glade-user-interface width="30%"}
 
-Next add two buttons from the container. The one on the left label Message and the one on the right label About. Also change the names to message and about. To do this click the first button. On the right hand side the editor should change for a button type (see figure [Glade Editor with Button](02-more-pygtk.html#fig-glade-editor-with-button)). As can be seen in figure[Glade Editor with Button](02-more-pygtk.html#fig-glade-editor-with-button); the class is of type GtkButton, the name is set to message meaning that when it is called with PyGTK it uses the name message. For the Label it is set to Message. The label is what is displayed to the user as the button text.
+Next add two buttons from the container. The one on the left label Message and the one on the right label About. Also change the names to message and about. To do this click the first button. On the right hand side the editor should change for a button type (see figure [Glade Editor with Button](02-more-gtk4.html#fig-glade-editor-with-button)). As can be seen in figure[Glade Editor with Button](02-more-gtk4.html#fig-glade-editor-with-button); the class is of type GtkButton, the name is set to message meaning that when it is called with PyGTK it uses the name message. For the Label it is set to Message. The label is what is displayed to the user as the button text.
 
 ![Glade Editor with Button](images/more-pygtk/Screenshot-glade-example-button-editor.png){: #fig-glade-editor-with-button width="50%"}
 
-Once the buttons have been added and setup with the names and labels then the signals that are to be caught should be added (see figure [Signal Handler Specified](02-more-pygtk.html#fig-glade-signal-handler-specified)). To add signal methods to the buttons first select the message button. Then in the editor window select the Signals tab. Under GtkButton there will be a signal called *clicked*. For clicked add a handler. If the handler space is clicked it will provide a default list to choose from. To see what it should look like look at figure [Signal Handler Specified](02-more-pygtk.html#fig-glade-signal-handler-specified). What is typed as the Handler is the function or method in the python code that will be called.
+Once the buttons have been added and setup with the names and labels then the signals that are to be caught should be added (see figure [Signal Handler Specified](02-more-gtk4.html#fig-glade-signal-handler-specified)). To add signal methods to the buttons first select the message button. Then in the editor window select the Signals tab. Under GtkButton there will be a signal called *clicked*. For clicked add a handler. If the handler space is clicked it will provide a default list to choose from. To see what it should look like look at figure [Signal Handler Specified](02-more-gtk4.html#fig-glade-signal-handler-specified). What is typed as the Handler is the function or method in the python code that will be called.
 
 ![Signal Handler Specified](images/more-pygtk/Screenshot-glade-example-signal-handler.png){: #fig-glade-signal-handler-specified width="50%"}
 
-Now that the buttons have been added to the main window (whose name is window1) it is time to make sure that this window is visible. Select the main window and in the editor select the Common tab. Once in the Common tab find the *Visible* option and make sure it is set to *Yes* (see figure [Main Windows Set as Visible](02-more-pygtk.html#fig-glade-main-windows-set-as-visible)).
+Now that the buttons have been added to the main window (whose name is window1) it is time to make sure that this window is visible. Select the main window and in the editor select the Common tab. Once in the Common tab find the *Visible* option and make sure it is set to *Yes* (see figure [Main Windows Set as Visible](02-more-gtk4.html#fig-glade-main-windows-set-as-visible)).
 
 ![Main Windows Set as Visible](images/more-pygtk/Screenshot-glade-example-main-window-visible.png){: #fig-glade-main-windows-set-as-visible width="50%"}
 
@@ -806,7 +809,7 @@ builder = gtk.Builder()
 builder.add_from_file("glade-example.xml")
 ```
 
-Also instead of using get\_widget like in the glade example (see [Glade 3](02-more-pygtk.html#sec-glade-3)), the method `get_object` is used.
+Also instead of using get\_widget like in the glade example (see [Glade 3](02-more-gtk4.html#sec-glade-3)), the method `get_object` is used.
 
 ```python
 main_window = builder.get_object("window1")
@@ -853,7 +856,7 @@ if __name__ == "__main__":
   gtk.main()
 ```
 
-This example creates a window with a gtk.VBox and adds two images. The first image is set from stock gtk images created with the set\_from stock method. The set\_from\_stock method requires a GTK stock image and a stock size. The stock types available can be found in the appendix ([Stock Icons](15-stock-icons.html#sec-appendix-stock-icons)). The stock sizes include:
+This example creates a window with a gtk.VBox and adds two images. The first image is set from stock gtk images created with the set\_from stock method. The set\_from\_stock method requires a GTK stock image and a stock size. The stock types available can be found in the appendix ([Stock Icons](94-icon-names.html#sec-appendix-stock-icons)). The stock sizes include:
 
 - gtk.ICON\_SIZE\_MENU
 - gtk.ICON\_SIZE\_SMALL\_TOOLBAR
@@ -917,8 +920,8 @@ This section is not yet written :)
 
 [^1]: Take a look at: <http://pygtk.org/pygtk2tutorial/sec-DNDMethods.html>
 [^2]: Oh do I ever know it. Talk about wasted hours of my life I am never getting back.
-[^3]: For a full listing of GTK stock icons take a look at the list of stock icons on page [Stock Icons](15-stock-icons.html#sec-appendix-stock-icons) or the pygtk website at: <http://www.pygtk.org/docs/pygtk/gtk-stock-items.html>
-[^4]: See section[PyGTK and Windows](14-pygtk-and-windows.html#sec-appendix-pygtk-and-windows) for instructions on using PyGTK on Windows for more information. Or just go to <http://sourceforge.net/projects/pywin32/files/> and download and install it.
+[^3]: For a full listing of GTK stock icons take a look at the list of stock icons on page [Stock Icons](94-icon-names.html#sec-appendix-stock-icons) or the pygtk website at: <http://www.pygtk.org/docs/pygtk/gtk-stock-items.html>
+[^4]: See sectionPyGTK and Windows for instructions on using PyGTK on Windows for more information. Or just go to <http://sourceforge.net/projects/pywin32/files/> and download and install it.
 [^5]: For more information on gtk-builder-convert visit: <http://library.gnome.org/devel/gtk/2.12/gtk-builder-convert.html>. Also if you plan on using gtk-builder-convert, gtk development files must be installed to have it installed. This is accomplished on Ubuntu by installing libgtk2.0-dev.
 [^6]: The PyGTK image class can be found at: <http://www.pygtk.org/docs/pygtk/class-gtkimage.html>
 [^7]: The PyGTK tooltip reference page can be found at: <http://www.pygtk.org/docs/pygtk/class-gtktooltip.html>

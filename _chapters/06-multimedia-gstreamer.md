@@ -1,10 +1,13 @@
 ---
 layout: chapter
-title: "Audio and Video Playback - GStreamer"
+title: "Audio and Video with GStreamer"
 number: 6
+part: 1
 ---
 
-> Please send any fixes or suggestions to peter@majorsilence.com or leave a comment at http://www.majorsilence.com/pygtk\_book.
+> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
+> carried over from the previous edition. It is queued for the GTK 4 and
+> PyGObject rewrite; the code in it will not run against GTK 4.
 
 ## Introduction
 
@@ -494,7 +497,7 @@ Seeking allows multimedia software to display the position in the audio or video
 
 When playing a media file it may be a good idea to display the current position relative to the duration of the file as a courtesy to the user.
 
-Displaying the duration of the file and current time position will require adding two methods to the play video ([Play Video Example](06-audio-and-video-playback-gstreamer.html#simple-video-player-example)) example found earlier in the chapter.
+Displaying the duration of the file and current time position will require adding two methods to the play video ([Play Video Example](06-multimedia-gstreamer.html#simple-video-player-example)) example found earlier in the chapter.
 
 In the \_\_init\_\_ method of the Main class the variables time\_format, duration and is\_playing are added.
 

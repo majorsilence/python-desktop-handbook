@@ -17,7 +17,10 @@ layout: default
         {%- endfor %}
     <p class="eyebrow">Appendix {{ letter }}</p>
       {%- else %}
-    <p class="eyebrow">Chapter {{ page.number }}</p>
+        {%- for part in site.parts -%}
+          {%- if part.number == page.part -%}{%- assign part_title = part.title -%}{%- endif -%}
+        {%- endfor %}
+    <p class="eyebrow">Chapter {{ page.number }}{% if part_title %} &middot; {{ part_title }}{% endif %}</p>
       {%- endif %}
     {%- endunless %}
     <h1{% if page.anchor %} id="{{ page.anchor }}"{% endif %}>{{ page.title }}</h1>

@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Book Text Licenses"
-number: 12
+number: 90
 appendix: true
 ---
 

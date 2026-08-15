@@ -1,9 +1,9 @@
 ---
 layout: chapter
-title: "Stock Icons"
-number: 15
-appendix: true
 anchor: sec-appendix-stock-icons
+title: "Icon Names"
+number: 94
+appendix: true
 ---
 
 gtk.STOCK\_ABOUT
