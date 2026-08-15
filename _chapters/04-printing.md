@@ -192,7 +192,7 @@ If pagination is genuinely expensive, `set_n_pages(-1)` in `begin-print` and use
 `paginate` signal instead: GTK calls it repeatedly, you do a little work each time
 and return `False` until you are finished, and the interface stays responsive.
 
-## Page setup and settings {#settings}
+## Page setup and settings {#print-settings}
 
 Two objects carry the user's choices, and they are different things:
 

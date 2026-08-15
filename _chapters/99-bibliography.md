@@ -22,4 +22,4 @@ backmatter: true
 - <a id="bib-key-23"></a>2008-01-23, Thomas Heller, Internet Explorer with PyGTK, <http://www.mail-archive.com/comtypes-users@lists.sourceforge.net/msg00084.html>
 - <a id="bib-key-27"></a>2007-09-23, Giuliani Vito Ivan, <http://zeta-puppis.com/2007/09/23/an-introduction-to-pyclutter-part-one/>
 - <a id="bib-key-2"></a>Accessed 2009-02-18, gettext - Multilingual internationalization services, <http://docs.python.org/library/gettext.html>
-- <a id="bib-key-3"></a>Accessed 2009-02-18, learningpython.com,<http://www.learningpython.com/2006/12/03/translating-your-pythonpygtk-application/>
+- <a id="bib-key-3-2"></a>Accessed 2009-02-18, learningpython.com,<http://www.learningpython.com/2006/12/03/translating-your-pythonpygtk-application/>

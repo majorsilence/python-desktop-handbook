@@ -233,7 +233,7 @@ WebKit 6.0. An **ephemeral** session — `WebKit.NetworkSession.new_ephemeral()`
 keeps nothing on disk, which is what you want for a preview pane or anything
 private.
 
-## Settings worth changing {#settings}
+## Settings worth changing {#webkit-settings}
 
 ```python
 settings = view.get_settings()

@@ -156,7 +156,6 @@ documentclass: book
 classoption:
   - twoside
   - openright
-papersize: custom
 geometry:
   - paperwidth=20.95cm
   - paperheight=27.31cm

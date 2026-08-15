@@ -219,7 +219,7 @@ it yourself with `remove_tick_callback()`.
 
 The full example is `examples/gtk4/animation/frame-clock.py`.
 
-## Moving a whole widget {#transforms}
+## Moving a whole widget {#widget-transforms}
 
 Every widget has a transform, applied by its parent when it is snapshotted. To
 move, rotate or scale one without touching its layout, override `do_snapshot()`

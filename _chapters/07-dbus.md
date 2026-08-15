@@ -347,7 +347,7 @@ dbus-run-session -- sh -c "python3 export-a-service.py & sleep 1; python3 call-o
 else on the machine can see it, so tests cannot collide, and it is how the
 examples in this chapter are verified on each build.
 
-## Portals are D-Bus {#portals}
+## Portals are D-Bus {#dbus-portals}
 
 The portals from the desktop integration chapter are ordinary D-Bus services on
 `org.freedesktop.portal.Desktop` at `/org/freedesktop/portal/desktop`, and

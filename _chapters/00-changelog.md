@@ -20,21 +20,37 @@ Three things changed about how the book is made, as well as what is in it:
 - Figures that can be generated are generated, by running the example that draws
   them, rather than being screenshots that slowly stop matching the text.
 
-Rewritten so far:
+Part I — GTK 4 with PyGObject — is complete:
 
-- **[Getting Started with GTK 4](01-getting-started.html)** — replaces *PyGTK
-  Introduction*. `Gtk.Application`, boxes without packing arguments, grouped check
-  buttons in place of radio buttons, `Gtk.DropDown`, menus as models plus actions,
-  asynchronous dialogs, and an introduction to libadwaita.
-- **[More GTK 4](02-more-gtk4.html)** — replaces *More PyGTK*. List and column
-  views over `Gio.ListStore`, `Gtk.FileDialog`, drag and drop through controllers,
-  `Gtk.Picture`, `Gtk.Template` over `.ui` files, and notifications.
-- **[Drawing with Cairo](03-drawing-with-cairo.html)** — replaces *Cairo*. Cairo
-  through `Gtk.DrawingArea`, Pango for text, and `GtkSnapshot` for widget drawing.
-- **[Migrating from PyGTK](92-migrating-from-pygtk.html)** — new. A translation
-  table from the idioms of the previous edition.
+- **[Getting Started with GTK 4](01-getting-started.html)** — `Gtk.Application`,
+  boxes without packing arguments, grouped check buttons in place of radio
+  buttons, `Gtk.DropDown`, menus as models plus actions, asynchronous dialogs,
+  and libadwaita.
+- **[More GTK 4](02-more-gtk4.html)** — list and column views over
+  `Gio.ListStore`, `Gtk.FileDialog`, drag and drop through controllers,
+  `Gtk.Picture`, `Gtk.Template`, notifications.
+- **[Drawing with Cairo](03-drawing-with-cairo.html)** — Cairo through
+  `Gtk.DrawingArea`, Pango for text, `GtkSnapshot` for widget drawing.
+- **[Printing](04-printing.html)** — `Gtk.PrintOperation`, pagination, and
+  exporting a PDF so printing is testable without a printer.
+- **[Desktop Integration](05-desktop-integration.html)** — GSettings in place of
+  GConf, desktop files, libsecret in place of the gnome-keyring API, portals.
+- **[Audio and Video with GStreamer](06-multimedia-gstreamer.html)** — GStreamer
+  1.0, `Gtk.MediaFile`, pipelines and the bus, discovery, transcoding.
+- **[D-Bus](07-dbus.html)** — GDBus in place of dbus-python, proxies, signals,
+  and exporting a service.
+- **[Animation and Transitions](08-animation.html)** — replaces Clutter with
+  container transitions, CSS, `Adw.Animation` and the frame clock.
+- **[Embedding Web Content](09-web-content.html)** — WebKitGTK 6.0 in place of
+  gtkmozembed, and the JavaScript bridge.
+- **[Internationalization](10-internationalization.html)** — gettext without
+  intltool, and the two text-domain bindings GTK needs.
+- **[Packaging and Distribution](11-packaging.html)** — replaces IronPython and
+  Gtk#. Meson, GResource, AppStream metadata and Flatpak.
+- **[Migrating from PyGTK](92-migrating-from-pygtk.html)** — a translation table
+  from the previous edition's idioms.
 
-Chapters not yet rewritten still carry their GTK 2 text and say so at the top.
+Part II — Qt 6 with PySide6 — is not written yet.
 
 Dropped, because the technology was retired rather than replaced: the IronPython
 and Gtk# chapter, the PyGTK-on-Windows appendix, and the unfinished Telepathy,

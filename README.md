@@ -8,8 +8,8 @@ desktop integration.
 Read it online at <https://majorsilence.github.io/pygtknotebook/>, or download
 [the PDF](https://majorsilence.github.io/pygtknotebook/pygtk-notebook.pdf).
 
-> **Note:** everything currently in the book targets GTK 2 and the original
-> `pygtk` bindings. Updating it to GTK 3/4 and PyGObject is in progress.
+**Part I — GTK 4 with PyGObject — is complete.** Part II, covering the same
+ground with Qt 6 and PySide6, is not written yet.
 
 ## Repository layout
 
@@ -19,6 +19,8 @@ Read it online at <https://majorsilence.github.io/pygtknotebook/>, or download
 | `images/`, `examples/` | Figures and the runnable sample programs the text refers to. |
 | `_layouts/`, `assets/`, `index.md`, `_config.yml` | The Jekyll site. |
 | `tools/build-pdf.sh` | Builds the PDF from `_chapters/` via pandoc + LaTeX. |
+| `tools/smoke-test.py` | Starts every example and shuts it down again. |
+| `tools/make-figures.sh` | Regenerates the figures that examples produce. |
 | `tools/lyx2md.py` | The one-shot LyX → Markdown migration, kept for reference. |
 | `pygtk-notebook-latest.lyx` | The retired LyX source. No longer edited. |
 
@@ -72,9 +74,23 @@ The PDF is laid out to match the retired LyX original: `book` class, 10pt,
 two-sided, 20.95 × 27.31 cm paper, numbered chapters and an appendix, a table of
 contents and a list of figures.
 
+### The examples
+
+Every listing in the book is a file under `examples/`, and every one of them is
+started and shut down again on each build:
+
+```sh
+dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
+```
+
+It catches import errors, renamed methods, signals that no longer exist and
+anything that raises while the first window is built — including exceptions
+inside a signal handler, which GTK otherwise prints and swallows.
+
 ### Continuous builds
 
-`.github/workflows/pages.yml` builds the PDF, builds the site, copies the PDF
+`.github/workflows/pages.yml` smoke-tests the examples, builds and validates the
+packaging example with Meson, builds the PDF, builds the site, copies the PDF
 into it, and deploys the result to GitHub Pages on every push to `main`. Enable
 it under *Settings → Pages → Build and deployment → GitHub Actions*.
 

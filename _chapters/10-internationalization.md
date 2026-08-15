@@ -145,7 +145,7 @@ libintl.bindtextdomain(DOMAIN.encode(), LOCALE_DIR.encode())
 libintl.bind_textdomain_codeset(DOMAIN.encode(), b"UTF-8")
 ```
 
-## Strings in .ui files {#ui-files}
+## Strings in .ui files {#translatable-ui-files}
 
 ```xml
 <interface domain="greeter">
@@ -231,7 +231,7 @@ was never recompiled after the `.po` changed.
 language: a translation with a `%s` where the original had `%d`, or a missing
 placeholder.
 
-## Testing it {#testing}
+## Testing it {#testing-translations}
 
 ```bash
 LANGUAGE=de python3 greeter.py
