@@ -306,7 +306,7 @@ position, come back to `NULL`.
 
 ```python
 PIPELINE = """
-  uridecodebin3 name=source uri={uri}
+  uridecodebin name=source uri={uri}
   theoraenc name=videoenc ! oggmux name=mux ! filesink location={out}
   vorbisenc name=audioenc ! mux.
   videoconvert name=videoconv ! videoenc.
@@ -314,7 +314,7 @@ PIPELINE = """
 """
 ```
 
-`uridecodebin3` works out how to decode whatever it is given, so this converts
+`uridecodebin` works out how to decode whatever it is given, so this converts
 anything the installed plugins can read. The price is that **its output pads do not
 exist until it has looked at the stream**, so the encoders are connected in a
 handler rather than in the pipeline string:
@@ -334,12 +334,35 @@ def on_pad_added(_element, pad, pipeline):
     pad.link(target.get_static_pad("sink"))
 ```
 
-That `or pad.query_caps(None)` matters. A pad that has just appeared usually has
-**no current caps**: nothing has flowed through it yet, so nothing has been
-negotiated. `get_current_caps()` returns `None`, an obvious-looking
-`if caps is None: return` skips the stream, and the pipeline dies with
-`streaming stopped, reason not-linked`. `query_caps()` asks what the pad is willing
-to carry, which is enough to tell audio from video.
+That `or pad.query_caps(None)` is worth keeping. A pad that has just appeared may
+have **no current caps** — nothing has flowed through it yet, so nothing has been
+negotiated — and an obvious-looking `if caps is None: return` then skips the
+stream and the pipeline dies with `streaming stopped, reason not-linked`.
+`query_caps()` asks what the pad is *willing* to carry, which is enough to tell
+audio from video.
+
+### uridecodebin, not uridecodebin3 {#which-decodebin}
+
+The two look interchangeable. They are not, and the difference costs an afternoon
+if you meet it the hard way.
+
+`uridecodebin3` is built for **playback**, where a stream selection mechanism
+decides which of several audio or subtitle tracks is actually decoded. Put it in
+front of a muxer and the pipeline builds perfectly, both pads appear, both link
+with `Gst.PadLinkReturn.OK` — and then EOS is never propagated downstream. The
+muxer never finalises the file, the progress query sticks at around 90%, and the
+job hangs until something kills it. There is no error and nothing on the bus.
+
+The same pipeline with plain `uridecodebin` finishes in under a second:
+
+```text
+uridecodebin3    -> STALLED    in  29.9s
+uridecodebin     -> EOS        in   0.4s
+```
+
+So: `uridecodebin3` and `playbin3` for playing things, `uridecodebin` and
+`decodebin` for pipelines that write a file. When a job links up correctly and
+then simply never ends, this is the first thing to check.
 
 Progress is a query, not a message:
 
@@ -395,8 +418,10 @@ it is not how it is done any more. If you find code calling
 - `bus.add_signal_watch()` or no messages arrive. Print the debug half of
   `parse_error()`.
 - Always return the pipeline to `NULL`.
-- `uridecodebin3` grows its pads at runtime; use
+- decodebin grows its pads at runtime; use
   `get_current_caps() or query_caps(None)` in `pad-added`.
+- `uridecodebin3` is for playback. A pipeline that writes a file wants
+  `uridecodebin`, or it links correctly and then never reaches EOS.
 - Positions in GStreamer are nanoseconds (`Gst.SECOND`); in `Gtk.MediaStream` they
   are microseconds.
 - Video in a custom widget is `gtk4paintablesink` and a `Gtk.Picture`, not an X11

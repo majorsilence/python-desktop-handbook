@@ -18,10 +18,15 @@ from sample_media import ensure_sample
 
 Gst.init(None)
 
+# uridecodebin, not uridecodebin3. The two look interchangeable and are not: the
+# newer one is built for playback with stream selection, and in a pipeline that
+# ends in a muxer it links up perfectly and then never propagates EOS -- so the
+# muxer never finalises the file and the job hangs at around 90%.
+#
 # decodebin has no output pads until it has seen the stream, so the encoders are
 # linked in a pad-added handler rather than up front.
 PIPELINE = """
-  uridecodebin3 name=source uri={uri}
+  uridecodebin name=source uri={uri}
   theoraenc name=videoenc ! oggmux name=mux ! filesink location={out}
   vorbisenc name=audioenc ! mux.
   videoconvert name=videoconv ! videoenc.
@@ -32,9 +37,9 @@ PIPELINE = """
 def on_pad_added(_element, pad, pipeline):
     """Route each stream that appears into the right converter.
 
-    A new pad often has no *current* caps yet -- nothing has flowed through it, so
-    nothing has been negotiated. query_caps() asks what it is willing to carry,
-    which is enough to tell audio from video.
+    A new pad may have no *current* caps yet if nothing has flowed through it, so
+    fall back to asking what it is willing to carry, which is enough to tell audio
+    from video.
     """
     caps = pad.get_current_caps() or pad.query_caps(None)
     if caps is None or caps.is_empty():

@@ -31,10 +31,21 @@ import subprocess
 import sys
 import traceback
 
-# How long an example is allowed to sit on screen before we close it.
+# How long a window is allowed to sit on screen before we close it.
 LINGER_MS = 300
 
+# Examples that are batch jobs rather than windows -- a transcode, a pipeline --
+# run a bare GLib.MainLoop and finish when the work does, so they cannot be cut
+# short after LINGER_MS. This is the safety net that stops a stalled one hanging
+# the whole run, not the normal path: an example that hits it has failed.
+WATCHDOG_SECONDS = int(os.environ.get("SMOKE_TEST_WATCHDOG", "120"))
+
+# The in-process watchdog should always fire first, so that a hang is reported
+# against the example that hung rather than killing the harness.
+SUBPROCESS_TIMEOUT = WATCHDOG_SECONDS + 60
+
 SKIP_MARKER = "smoke-test: skip"
+WATCHDOG_MARKER = "smoke-test: watchdog fired"
 
 
 def patch_gtk() -> bool:
@@ -58,6 +69,28 @@ def patch_gtk() -> bool:
         return original(self, argv)
 
     Gio.Application.run = run
+    return True
+
+
+def patch_main_loop() -> bool:
+    """Put a watchdog on any bare GLib.MainLoop, so a stall fails instead of hangs."""
+    try:
+        from gi.repository import GLib
+    except ImportError:
+        return False
+
+    original = GLib.MainLoop.run
+
+    def run(self):
+        def give_up():
+            print(f"{WATCHDOG_MARKER} after {WATCHDOG_SECONDS}s", file=sys.stderr)
+            self.quit()
+            return GLib.SOURCE_REMOVE
+
+        GLib.timeout_add_seconds(WATCHDOG_SECONDS, give_up)
+        return original(self)
+
+    GLib.MainLoop.run = run
     return True
 
 
@@ -89,6 +122,7 @@ def run_one(path: pathlib.Path) -> tuple[bool, str]:
         return True, "skipped on request"
 
     patch_gtk()
+    patch_main_loop()
     patch_qt()
 
     argv, cwd, path_ = sys.argv[:], os.getcwd(), sys.path[:]
@@ -141,18 +175,32 @@ def main(argv: list[str]) -> int:
     failures = []
     paths = collect(args.targets)
     for path in paths:
-        result = subprocess.run(
-            [sys.executable, __file__, "--one", str(path)],
-            capture_output=True, text=True, timeout=120,
-        )
+        try:
+            result = subprocess.run(
+                [sys.executable, __file__, "--one", str(path)],
+                capture_output=True, text=True, timeout=SUBPROCESS_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            # The in-process watchdog should have caught this. Report it against
+            # the example and keep going -- one hang must not lose every result
+            # after it.
+            failures.append(path)
+            print(f"FAIL  {path}  (no output for {SUBPROCESS_TIMEOUT}s; killed)")
+            continue
+
         # An exception raised inside a GTK signal handler is printed and swallowed:
-        # the process still exits 0. Treat any traceback on stderr as a failure.
+        # the process still exits 0. Treat any traceback on stderr as a failure,
+        # and likewise an example that only finished because the watchdog fired.
         crashed = "Traceback (most recent call last)" in result.stderr
-        if result.returncode == 0 and not crashed:
+        stalled = WATCHDOG_MARKER in result.stderr
+
+        if result.returncode == 0 and not crashed and not stalled:
             print(f"PASS  {path}")
         else:
             failures.append(path)
-            print(f"FAIL  {path}" + ("  (exception in a callback)" if crashed else ""))
+            reason = ("  (exception in a callback)" if crashed else
+                      f"  (still running after {WATCHDOG_SECONDS}s)" if stalled else "")
+            print(f"FAIL  {path}{reason}")
             for line in (result.stderr or result.stdout).strip().splitlines()[-12:]:
                 print(f"      {line}")
 
