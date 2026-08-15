@@ -1,12 +1,15 @@
-# PyGTK Notebook
+# Python Desktop Notebook
 
-*A Journey Through Python Gnome Technologies* — an open source book about PyGTK
-and the Linux desktop technologies around it: Cairo graphics, GStreamer
-multimedia, Clutter animation, DBus, printing, internationalization and Gnome
-desktop integration.
+*Building Desktop Applications with GTK 4 and Qt 6* — an open source book about
+writing desktop applications in Python, and the technologies around them:
+drawing, printing, multimedia, D-Bus, embedded web content, translation and
+packaging.
 
 Read it online at <https://majorsilence.github.io/pygtknotebook/>, or download
-[the PDF](https://majorsilence.github.io/pygtknotebook/pygtk-notebook.pdf).
+[the PDF](https://majorsilence.github.io/pygtknotebook/python-desktop-notebook.pdf).
+
+It began as *PyGTK Notebook*, one person's notes on PyGTK and GTK 2. That
+edition is in the git history; this one is rewritten from it.
 
 **Part I — GTK 4 with PyGObject — is complete.** Part II, covering the same
 ground with Qt 6 and PySide6, is not written yet.
@@ -67,11 +70,11 @@ Needs pandoc and a LaTeX installation:
 
 ```sh
 sudo apt-get install pandoc texlive-xetex texlive-fonts-recommended texlive-latex-extra
-make pdf        # -> build/pygtk-notebook.pdf
+make pdf        # -> build/python-desktop-notebook.pdf
 ```
 
-The PDF is laid out to match the retired LyX original: `book` class, 10pt,
-two-sided, 20.95 × 27.31 cm paper, numbered chapters and an appendix, a table of
+The PDF keeps the shape the LyX original had: `book` class, 10pt, two-sided,
+20.95 × 27.31 cm paper, parts and numbered chapters with an appendix, a table of
 contents and a list of figures.
 
 ### The examples
