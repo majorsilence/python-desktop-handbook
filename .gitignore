@@ -10,3 +10,9 @@ __pycache__/
 *.pyc
 examples/gtk4/multimedia/sample.webm
 examples/gtk4/multimedia/transcoded.ogg
+examples/gtk4/cairo/surfaces.png
+examples/gtk4/cairo/surfaces.pdf
+examples/gtk4/cairo/surfaces.svg
+examples/gtk4/cairo/surfaces.ps
+examples/gtk4/cairo/*.png
+examples/gtk4/printing/*.pdf
