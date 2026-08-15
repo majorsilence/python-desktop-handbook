@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "More GTK 4"
-number: 2
+number: 3
 part: 1
 ---
 
@@ -453,7 +453,7 @@ helpful:
   with `@Gtk.Template.Callback()`.
 
 `translatable="yes"` marks a string for translation, and `xgettext` reads it
-straight out of the XML — see [Internationalization](10-internationalization.html).
+straight out of the XML — see [Internationalization](13-internationalization.html).
 
 Shipping the `.ui` file next to the `.py` file works while you develop. For
 anything you install, compile the files into a **GResource** bundle and load them
@@ -491,7 +491,7 @@ One catch that costs people an afternoon: the notification only appears if there
 an installed `.desktop` file whose basename matches the application id
 (`com.example.Notification.desktop` for `com.example.Notification`). Without it the
 call succeeds silently and nothing is shown. Desktop files are in
-[Desktop Integration](05-desktop-integration.html).
+[Desktop Integration](08-desktop-integration.html).
 
 The full example is `examples/gtk4/notification.py`.
 
@@ -510,5 +510,5 @@ The full example is `examples/gtk4/notification.py`.
   not part of this any more.
 - Status icons are gone; `Gio.Notification` covers what they were used for.
 
-[Drawing with Cairo](03-drawing-with-cairo.html) is next: what to do when no
-existing widget draws what you need.
+[Threads and Asynchronous Work](04-threads-and-async.html) is next: how to do
+something slow without the window freezing.

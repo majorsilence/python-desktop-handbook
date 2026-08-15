@@ -218,4 +218,4 @@ app.set_accels_for_action("app.save", ["<Control>s"])
 ```
 
 See [Menus and actions](01-getting-started.html#menus) for the whole pattern, and
-[Internationalization](10-internationalization.html) for translating the labels.
+[Internationalization](13-internationalization.html) for translating the labels.

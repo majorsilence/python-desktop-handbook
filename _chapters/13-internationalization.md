@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Internationalization"
-number: 10
+number: 13
 part: 1
 ---
 
@@ -307,5 +307,5 @@ which is a good reason to draw text with Pango rather than shipping a picture of
 - Test with `LANGUAGE=de`, a pseudolocale, and a right-to-left language.
 - Use `START`/`END` rather than `LEFT`/`RIGHT` and mirroring is free.
 
-[Packaging and Distribution](11-packaging.html) is next, and it is where the
+[Packaging and Distribution](14-packaging.html) is next, and it is where the
 translations, the desktop file, the icon and the schema all get installed together.

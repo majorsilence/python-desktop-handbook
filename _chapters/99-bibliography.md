@@ -74,15 +74,15 @@ The GTK Inspector
 
 `gdbus`, `busctl`, D-Spy
 : For looking at the session bus before writing anything against it. See
-  [D-Bus](07-dbus.html).
+  [D-Bus](10-dbus.html).
 
 `gst-launch-1.0`, `gst-inspect-1.0`
 : For prototyping a pipeline in seconds rather than minutes. See
-  [Audio and Video with GStreamer](06-multimedia-gstreamer.html).
+  [Audio and Video with GStreamer](09-multimedia-gstreamer.html).
 
 `flatpak-builder`
 : For building the manifest in
-  [Packaging and Distribution](11-packaging.html).
+  [Packaging and Distribution](14-packaging.html).
 
 ## Where the previous edition went
 

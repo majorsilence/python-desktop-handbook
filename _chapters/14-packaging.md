@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Packaging and Distribution"
-number: 11
+number: 14
 part: 1
 ---
 
@@ -46,7 +46,7 @@ notice any of it: `glib-compile-schemas`, `gtk-update-icon-cache` and
 `update-desktop-database`.
 
 Notice how much of that is the application id repeated. That is the point of
-picking it carefully in [Desktop Integration](05-desktop-integration.html).
+picking it carefully in [Desktop Integration](08-desktop-integration.html).
 
 ## Meson {#meson}
 
@@ -134,7 +134,7 @@ Everything the application needs to find is settled here, once, from values the
 build system knows. Nothing downstream guesses a path from `__file__`.
 
 The double `bindtextdomain` is the one from
-[Internationalization](10-internationalization.html), and this is where it belongs.
+[Internationalization](13-internationalization.html), and this is where it belongs.
 
 ### GResource {#gresource}
 

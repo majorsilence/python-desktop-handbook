@@ -251,7 +251,7 @@ reaching the end of a file.
 
 Callbacks run on the main thread, and while one is running the interface is frozen.
 Anything slow belongs on a worker thread or in an asynchronous call — see
-[D-Bus and asynchronous work](07-dbus.html) for the patterns.
+[D-Bus and asynchronous work](10-dbus.html) for the patterns.
 
 The full example is `examples/gtk4/callbacks.py`.
 
@@ -457,7 +457,7 @@ dropdown.connect(
 `Gtk.INVALID_LIST_POSITION` when nothing is selected. For anything richer than
 strings — a list of objects, a custom row layout, a searchable list — a drop down is
 backed by a list model and a factory, the same machinery that drives list views.
-That is [More GTK 4](02-more-gtk4.html).
+That is [More GTK 4](03-more-gtk4.html).
 
 The full example is `examples/gtk4/widgets/numbers-and-choices.py`.
 
@@ -585,7 +585,7 @@ which window the dialog belongs to.
 The same asynchronous shape covers the other dialogs: `Gtk.FileDialog`,
 `Gtk.ColorDialog`, `Gtk.FontDialog` all take a callback and a matching
 `*_finish()` that raises on dismissal. File dialogs are in
-[More GTK 4](02-more-gtk4.html).
+[More GTK 4](03-more-gtk4.html).
 
 The full example is `examples/gtk4/widgets/dialogs.py`.
 
@@ -691,8 +691,8 @@ The things to carry forward:
 - Dialogs are asynchronous, and their `*_finish()` methods raise when dismissed.
 - Reach for libadwaita before you reach for a hand-built layout.
 
-[More GTK 4](02-more-gtk4.html) picks up from here with lists and tables, file
-dialogs, drag and drop, and building interfaces from UI files instead of code.
+[GObject](02-gobject.html) is next: properties, signals and bindings, which are
+what the list widgets in the chapter after it are built on.
 
 If you are porting an existing PyGTK program,
 [Migrating from PyGTK](92-migrating-from-pygtk.html) is a translation table for the

@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Desktop Integration"
-number: 5
+number: 8
 part: 1
 ---
 
@@ -259,7 +259,7 @@ The full example is `examples/gtk4/desktop/install-desktop-file.sh`.
 
 ### Notifications need one {#notifications-need-desktop-file}
 
-The notification API in [More GTK 4](02-more-gtk4.html#notifications) only works if
+The notification API in [More GTK 4](03-more-gtk4.html#notifications) only works if
 an installed desktop file's basename matches the application id. Without it,
 `send_notification()` succeeds and nothing appears. This is the single most common
 "my notifications do not work" cause, and there is no error to go looking for.
@@ -355,7 +355,7 @@ go through a portal when there is one:
 Which means a program written the way this chapter describes is already
 sandbox-ready. The rest — screenshots, screen casting, location, running in the
 background, autostart, inhibiting suspend — has no GTK wrapper, and you either
-speak to the D-Bus interface directly (see [D-Bus](07-dbus.html)) or use the
+speak to the D-Bus interface directly (see [D-Bus](10-dbus.html)) or use the
 `libportal` library, which wraps them all.
 
 Two habits make the difference between a program that works sandboxed and one that
@@ -385,4 +385,4 @@ it. Under the portal the path may exist only for as long as the grant does.
 - GTK's own dialogs already go through portals; ask for files rather than guessing
   paths, and keep the `Gio.File`.
 
-[Audio and Video with GStreamer](06-multimedia-gstreamer.html) is next.
+[Audio and Video with GStreamer](09-multimedia-gstreamer.html) is next.

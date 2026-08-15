@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Animation and Transitions"
-number: 8
+number: 11
 part: 1
 ---
 
@@ -288,4 +288,4 @@ fine, a 600 ms slide before a menu opens is not.
 - Check `gtk-enable-animations` and `prefers-reduced-motion`, and cancel with
   `skip()`.
 
-[Embedding Web Content](09-web-content.html) is next.
+[Embedding Web Content](12-web-content.html) is next.

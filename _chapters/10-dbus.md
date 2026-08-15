@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "D-Bus"
-number: 7
+number: 10
 part: 1
 ---
 
@@ -15,7 +15,7 @@ D-Bus is how programs on a Linux desktop talk to each other. Your music player
 tells the shell what is playing; the shell asks your application to open a file;
 your program asks the desktop to show a notification, unlock a keyring or pick a
 file on its behalf. Almost everything in
-[Desktop Integration](05-desktop-integration.html) is D-Bus with a wrapper over it.
+[Desktop Integration](08-desktop-integration.html) is D-Bus with a wrapper over it.
 
 There are two buses:
 
@@ -173,7 +173,7 @@ took too long, or because you were not allowed — all of them arrive here.
 
 The full example is `examples/gtk4/dbus/call-our-service.py`.
 
-## Listening {#signals}
+## Listening {#dbus-signals}
 
 A proxy re-emits its object's signals as `g-signal`:
 
@@ -393,4 +393,4 @@ URI, and the trash all live there.
   exported.
 - `dbus-run-session` gives you a private bus for testing.
 
-[Animation and Transitions](08-animation.html) is next.
+[Animation and Transitions](11-animation.html) is next.

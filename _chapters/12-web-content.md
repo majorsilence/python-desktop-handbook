@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Embedding Web Content"
-number: 9
+number: 12
 part: 1
 ---
 
@@ -280,4 +280,4 @@ anywhere a real page will be loaded.
   through it as untrusted input.
 - `load_html()` needs a base URI or the page has no origin.
 
-[Internationalization](10-internationalization.html) is next.
+[Internationalization](13-internationalization.html) is next.

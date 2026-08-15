@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Audio and Video with GStreamer"
-number: 6
+number: 9
 part: 1
 ---
 
@@ -427,5 +427,5 @@ it is not how it is done any more. If you find code calling
 - Video in a custom widget is `gtk4paintablesink` and a `Gtk.Picture`, not an X11
   window id.
 
-[D-Bus](07-dbus.html) is next: talking to the rest of the session, and to programs
+[D-Bus](10-dbus.html) is next: talking to the rest of the session, and to programs
 that are not yours.

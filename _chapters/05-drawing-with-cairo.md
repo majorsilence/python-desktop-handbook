@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Drawing with Cairo"
-number: 3
+number: 5
 part: 1
 ---
 
@@ -464,5 +464,5 @@ The full example is `examples/gtk4/cairo/snapshot-widget.py`.
 - For widget chrome made of rectangles and gradients, `do_snapshot()` keeps the
   drawing on the GPU.
 
-[Printing](04-printing.html) is next, and it is mostly this chapter again: a print
-job hands you a Cairo context and asks you to draw a page.
+[Custom Widgets](06-custom-widgets.html) is next, and picks up where the snapshot
+section here leaves off.

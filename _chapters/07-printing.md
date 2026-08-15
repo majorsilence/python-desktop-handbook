@@ -1,7 +1,7 @@
 ---
 layout: chapter
 title: "Printing"
-number: 4
+number: 7
 part: 1
 ---
 
@@ -10,7 +10,7 @@ part: 1
 
 ## Introduction
 
-Printing in GTK is [Drawing with Cairo](03-drawing-with-cairo.html) with a
+Printing in GTK is [Drawing with Cairo](05-drawing-with-cairo.html) with a
 different surface and a small amount of paperwork. `Gtk.PrintOperation` handles the
 paperwork — talking to CUPS, showing the print dialog, running the preview — and
 then hands you a Cairo context and asks you to draw a page.
@@ -265,6 +265,6 @@ operation.connect("done", lambda op, result: print("finished:", result))
 - `Gtk.PageSetup` is the paper, `Gtk.PrintSettings` is the job. Keep both between
   jobs, and save them to a file to keep them between runs.
 
-[Desktop Integration](05-desktop-integration.html) is next: settings, desktop
+[Desktop Integration](08-desktop-integration.html) is next: settings, desktop
 files, portals and the rest of making a program part of the desktop rather than a
 window floating on it.

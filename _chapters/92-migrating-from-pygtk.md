@@ -184,7 +184,7 @@ area.set_draw_func(on_draw)            # (area, cairo_context, width, height)
 Cairo is still Cairo, so the body of an old `expose-event` handler usually
 transplants unchanged once you take the context from the argument list instead of
 calling `widget.window.cairo_create()`. See
-[Drawing with Cairo](03-drawing-with-cairo.html).
+[Drawing with Cairo](05-drawing-with-cairo.html).
 
 ## Threads
 
@@ -211,11 +211,11 @@ technology behind it was retired rather than replaced:
 - **libglade** — use `Gtk.Builder` with `.ui` files; `gtk-builder-convert` is long gone.
 - **Glade the designer** — no longer supports GTK 4. Write `.ui` files by hand,
   use Blueprint, or use Cambalache.
-- **GConf** — use `GSettings`. See [Desktop Integration](05-desktop-integration.html).
+- **GConf** — use `GSettings`. See [Desktop Integration](08-desktop-integration.html).
 - **Clutter** — folded into GTK; use GTK 4's own animation API. See
-  [Animation and Transitions](08-animation.html).
+  [Animation and Transitions](11-animation.html).
 - **gtkmozembed and the Internet Explorer control** — use WebKitGTK. See
-  [Embedding Web Content](09-web-content.html).
+  [Embedding Web Content](12-web-content.html).
 - **IronPython with Gtk#** — not a supported way to write GTK applications.
 - **Empathy and Geoclue chapters** — Empathy is unmaintained; Geoclue is reached
   through portals now.
