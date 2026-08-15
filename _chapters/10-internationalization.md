@@ -176,7 +176,7 @@ Translating a project that makes use of a glade file is easy. It just takes a fe
 
 <a id="fig-translations-glade-translation-project"></a>
 
-![Glade Translation Project](images/translations/translations-example.png){width=40%}
+![Glade Translation Project](images/translations/translations-example.png){: width="40%"}
 
 ```python
 import pygtk

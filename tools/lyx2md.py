@@ -645,9 +645,10 @@ def unescape_heading(text: str) -> str:
 def render_figure(fig: Figure) -> str:
     caption = fig.caption or ""
     caption = caption.replace(r"\_", "_")
+    # kramdown inline attribute list; tools/build-pdf.sh rewrites it for pandoc.
     attrs = ""
     if fig.scale and fig.scale != 100:
-        attrs = f"{{width={fig.scale}%}}"
+        attrs = f'{{: width="{fig.scale}%"}}'
     anchor = f'<a id="{slugify(fig.label)}"></a>\n\n' if fig.label else ""
     return f"{anchor}![{caption}]({fig.path}){attrs}\n"
 
@@ -670,6 +671,9 @@ def resolve_refs(text: str, labels: dict[str, tuple[str, str]]) -> str:
         return f"[{title}]({filename.replace('.md', '.html')}#{slugify(name)})"
 
     text = re.sub(r"\x04([^\x04]*)\x04", repl, text)
+    # LyX puts no space after a cross-reference inset, so the sentence runs into the
+    # link text ("...on page 40to see"). Separate them.
+    text = re.sub(r"(\]\([^)]*\))(?=\w)", r"\1 ", text)
     return re.sub(r"\x05[^\x05]*\x05", "", text)
 
 

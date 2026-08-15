@@ -1,0 +1,10 @@
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+build/
+vendor/
+Gemfile.lock
+*.pdf
+__pycache__/
+*.pyc

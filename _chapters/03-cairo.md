@@ -52,11 +52,11 @@ Next, using the contexts move\_to method moves the position of the brush to the 
 
 Using the contexts `line_to` method will draw a line from the current position, that was specified with the move\_to method, to the new position specified with the line\_to method. To display what has been drawn with the `line_to` method the contexts *stroke* method must be called. Once `context.stroke()` is called then the lines are actually applied to the surface.
 
-See figure [Two Straight Lines](03-cairo.html#fig-cairo-two-striaght-lines)to see what the output should look like.
+See figure [Two Straight Lines](03-cairo.html#fig-cairo-two-striaght-lines) to see what the output should look like.
 
 <a id="fig-cairo-two-striaght-lines"></a>
 
-![Two Straight Lines](images/cairo/cairo-draw-line1.png){width=50%}
+![Two Straight Lines](images/cairo/cairo-draw-line1.png){: width="50%"}
 
 ### Cairo Surface Format
 
@@ -372,7 +372,7 @@ close\_path
 
 <a id="fig-cairo-pygtk-cairo-custom-widget"></a>
 
-![Custom PyGTK widget with Cairo](images/cairo/cairo-gtk-screenshot.png){width=70%}
+![Custom PyGTK widget with Cairo](images/cairo/cairo-gtk-screenshot.png){: width="70%"}
 
 Cairo can be used with PyGTK by creating a custom widget. The custom widget discussed here will extend the gtk.DrawingArea class and override[^2] the expose\_event signal callback method; `do_expose_event`.
 

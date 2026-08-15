@@ -1,0 +1,55 @@
+title: PyGTK Notebook
+subtitle: A Journey Through Python Gnome Technologies
+author: Peter Gill
+description: >-
+  An open source book covering PyGTK and the Linux desktop technologies around it:
+  Cairo graphics, GStreamer multimedia, Clutter animation, DBus, printing,
+  internationalization and Gnome desktop integration.
+version: "0.13"
+lang: en
+
+# Set by the Pages workflow; harmless locally.
+url: ""
+baseurl: ""
+
+collections:
+  chapters:
+    output: true
+    permalink: /:path.html
+
+defaults:
+  - scope:
+      path: ""
+      type: chapters
+    values:
+      layout: chapter
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+  toc_levels: 2..3
+
+plugins:
+  - jekyll-sitemap
+  - jekyll-toc
+
+toc:
+  min_level: 2
+  max_level: 3
+  ordered_list: false
+
+sass:
+  style: compressed
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - Makefile
+  - README.md
+  - Readme.md
+  - tools/
+  - build/
+  - vendor/
+  - "*.lyx"

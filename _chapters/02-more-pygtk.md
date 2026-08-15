@@ -721,25 +721,25 @@ To create a simple application, from the Toplevels select and add a Window. Next
 
 <a id="fig-basic-glade-user-interface"></a>
 
-![Basic Glade User Interface Designer](images/more-pygtk/Screenshot-glade-example.png){width=30%}
+![Basic Glade User Interface Designer](images/more-pygtk/Screenshot-glade-example.png){: width="30%"}
 
 Next add two buttons from the container. The one on the left label Message and the one on the right label About. Also change the names to message and about. To do this click the first button. On the right hand side the editor should change for a button type (see figure [Glade Editor with Button](02-more-pygtk.html#fig-glade-editor-with-button)). As can be seen in figure[Glade Editor with Button](02-more-pygtk.html#fig-glade-editor-with-button); the class is of type GtkButton, the name is set to message meaning that when it is called with PyGTK it uses the name message. For the Label it is set to Message. The label is what is displayed to the user as the button text.
 
 <a id="fig-glade-editor-with-button"></a>
 
-![Glade Editor with Button](images/more-pygtk/Screenshot-glade-example-button-editor.png){width=50%}
+![Glade Editor with Button](images/more-pygtk/Screenshot-glade-example-button-editor.png){: width="50%"}
 
 Once the buttons have been added and setup with the names and labels then the signals that are to be caught should be added (see figure [Signal Handler Specified](02-more-pygtk.html#fig-glade-signal-handler-specified)). To add signal methods to the buttons first select the message button. Then in the editor window select the Signals tab. Under GtkButton there will be a signal called *clicked*. For clicked add a handler. If the handler space is clicked it will provide a default list to choose from. To see what it should look like look at figure [Signal Handler Specified](02-more-pygtk.html#fig-glade-signal-handler-specified). What is typed as the Handler is the function or method in the python code that will be called.
 
 <a id="fig-glade-signal-handler-specified"></a>
 
-![Signal Handler Specified](images/more-pygtk/Screenshot-glade-example-signal-handler.png){width=50%}
+![Signal Handler Specified](images/more-pygtk/Screenshot-glade-example-signal-handler.png){: width="50%"}
 
 Now that the buttons have been added to the main window (whose name is window1) it is time to make sure that this window is visible. Select the main window and in the editor select the Common tab. Once in the Common tab find the *Visible* option and make sure it is set to *Yes* (see figure [Main Windows Set as Visible](02-more-pygtk.html#fig-glade-main-windows-set-as-visible)).
 
 <a id="fig-glade-main-windows-set-as-visible"></a>
 
-![Main Windows Set as Visible](images/more-pygtk/Screenshot-glade-example-main-window-visible.png){width=50%}
+![Main Windows Set as Visible](images/more-pygtk/Screenshot-glade-example-main-window-visible.png){: width="50%"}
 
 Now the main window is done. Save your work. Next an about dialog will be added. To add an about dialog it is selected from the Toplevel elements on the palette. Leave it with the default name *aboutdialog1*. The about dialog will be used to show how to interact with more than one window in glade.
 

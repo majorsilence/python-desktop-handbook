@@ -1,0 +1,31 @@
+---
+layout: default
+---
+<div class="hero">
+  <p class="eyebrow">Version {{ site.version }}</p>
+  <h1>{{ site.title }}</h1>
+  <p class="tagline">{{ site.subtitle }}</p>
+  <p class="byline">by {{ site.author }}</p>
+  <p class="hero-actions">
+    <a class="button" href="{{ '/01-pygtk-introduction.html' | relative_url }}">Start reading</a>
+    <a class="button button-quiet" href="{{ '/pygtk-notebook.pdf' | relative_url }}">Download PDF</a>
+  </p>
+</div>
+
+<div class="prose intro">
+  {{ content }}
+</div>
+
+<ol class="contents">
+  {%- assign chapters = site.chapters | sort: "number" -%}
+  {%- for chapter in chapters %}
+  <li class="contents-item{% if chapter.appendix %} is-appendix{% endif %}">
+    <a href="{{ chapter.url | relative_url }}">
+      <span class="contents-number">
+        {%- if chapter.unnumbered -%}&bull;{%- elsif chapter.appendix -%}A{%- else -%}{{ chapter.number }}{%- endif -%}
+      </span>
+      <span class="contents-title">{{ chapter.title }}</span>
+    </a>
+  </li>
+  {%- endfor %}
+</ol>

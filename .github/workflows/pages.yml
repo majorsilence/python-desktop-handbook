@@ -1,0 +1,87 @@
+name: Build and deploy book
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pdf:
+    name: Build PDF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pandoc and TeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pandoc texlive-xetex texlive-fonts-recommended texlive-latex-extra
+
+      - name: Build the PDF
+        run: ./tools/build-pdf.sh --output build/pygtk-notebook.pdf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pygtk-notebook-pdf
+          path: build/pygtk-notebook.pdf
+          if-no-files-found: error
+
+  site:
+    name: Build site
+    runs-on: ubuntu-latest
+    needs: pdf
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - name: Collect the PDF built above
+        uses: actions/download-artifact@v4
+        with:
+          name: pygtk-notebook-pdf
+          path: .
+
+      - name: Build with Jekyll
+        env:
+          JEKYLL_ENV: production
+        run: |
+          bundle exec jekyll build \
+            --baseurl "${{ steps.pages.outputs.base_path }}" \
+            --destination _site
+
+      - name: Publish the PDF alongside the site
+        run: cp pygtk-notebook.pdf _site/pygtk-notebook.pdf
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,41 @@
+---
+layout: default
+---
+{%- assign chapters = site.chapters | sort: "number" -%}
+
+<article class="chapter">
+  <header class="chapter-header">
+    {%- unless page.unnumbered %}
+    <p class="eyebrow">{% if page.appendix %}Appendix{% else %}Chapter {{ page.number }}{% endif %}</p>
+    {%- endunless %}
+    <h1{% if page.anchor %} id="{{ page.anchor }}"{% endif %}>{{ page.title }}</h1>
+  </header>
+
+  <nav class="toc" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    {{ content | toc_only }}
+  </nav>
+
+  <div class="prose">
+    {{ content }}
+  </div>
+
+  <nav class="pager">
+    {%- for chapter in chapters %}
+      {%- if chapter.url == page.url %}
+        {%- assign back = forloop.index0 | minus: 1 %}
+        {%- assign ahead = forloop.index0 | plus: 1 %}
+        {%- if forloop.index0 > 0 %}
+    <a class="pager-prev" href="{{ chapters[back].url | relative_url }}">
+      <span>Previous</span>{{ chapters[back].title }}
+    </a>
+        {%- endif %}
+        {%- if ahead < chapters.size %}
+    <a class="pager-next" href="{{ chapters[ahead].url | relative_url }}">
+      <span>Next</span>{{ chapters[ahead].title }}
+    </a>
+        {%- endif %}
+      {%- endif %}
+    {%- endfor %}
+  </nav>
+</article>
