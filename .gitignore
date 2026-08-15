@@ -8,3 +8,5 @@ Gemfile.lock
 *.pdf
 __pycache__/
 *.pyc
+examples/gtk4/multimedia/sample.webm
+examples/gtk4/multimedia/transcoded.ogg

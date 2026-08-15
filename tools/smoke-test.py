@@ -90,8 +90,11 @@ def run_one(path: pathlib.Path) -> tuple[bool, str]:
     patch_gtk()
     patch_qt()
 
-    argv, cwd = sys.argv[:], os.getcwd()
+    argv, cwd, path_ = sys.argv[:], os.getcwd(), sys.path[:]
     sys.argv = [str(path)]
+    # `python3 example.py` puts the script's directory on sys.path; runpy does not,
+    # so examples that import a helper beside them would fail here but not for a reader.
+    sys.path.insert(0, str(path.parent))
     os.chdir(path.parent)
     try:
         runpy.run_path(str(path), run_name="__main__")
@@ -104,7 +107,8 @@ def run_one(path: pathlib.Path) -> tuple[bool, str]:
     except Exception:
         return False, traceback.format_exc()
     finally:
-        sys.argv, _ = argv, os.chdir(cwd)
+        sys.argv, sys.path = argv, path_
+        os.chdir(cwd)
 
 
 def collect(targets: list[str]) -> list[pathlib.Path]:
