@@ -5,923 +5,510 @@ number: 2
 part: 1
 ---
 
-> **Not yet rewritten.** This chapter still describes GTK 2 and PyGTK,
-> carried over from the previous edition. It is queued for the GTK 4 and
-> PyGObject rewrite; the code in it will not run against GTK 4.
+> Every listing in this chapter is a file under `examples/gtk4/`. They are run on
+> each build, so if one of them stops working the build says so.
 
-## Drag and Drop
+## Introduction
 
-I will not be writing very much about drag and drop, just enough to be useful in the slide show demonstration program that this notebook is leading towards. There are a few things we need to know.
+[Getting Started with GTK 4](01-getting-started.html) covered the widgets a window
+is made of. This chapter covers the machinery around them: showing a list of
+things, letting the user pick a file, moving data around by dragging it, putting a
+picture on screen, and describing an interface in a file instead of in code.
 
-The only part of drag and drop that we care about for this program is drag\_dest\_set(flags, targets, actions).
+The list section is the long one, and it is worth the time. GTK 4's list widgets
+look intimidating next to `gtk.ListStore` and turn out to be simpler once the
+pieces have names — and they are the same pieces that drive drop downs, grid views
+and the sidebar of every GNOME application.
 
-flags [^1] - according to the PyGTK tutorial, flags are:
+## Lists and tables {#lists}
 
-- gtk.DEST\_DEFAULT\_MOTION: If set for a widget, GTK+, during a drag over this widget will check if the drag matches this widget's list of possible targets and actions. GTK+ will then call drag\_status() as appropriate.
-- gtk.DEST\_DEFAULT\_HIGHLIGHT: If set for a widget, GTK+ will draw a highlight on this widget as long as a drag is over this widget and the widget drag format and action is acceptable.
-- gtk.DEST\_DEFAULT\_DROP: If set for a widget, when a drop occurs, GTK+ will check if the drag matches this widget's list of possible targets and actions. If so, GTK+ will call drag\_get\_data() on behalf of the widget. Whether or not the drop is successful, GTK+ will call drag\_finish(). If the action was a move and the drag was successful, then TRUE will be passed for the delete parameter to drag\_finish().
-- gtk.DEST\_DEFAULT\_ALL: If set, specifies that all default actions should be taken.
+`GtkTreeView`, `GtkListStore` and `GtkTreeStore` are deprecated in GTK 4. They are
+replaced by a set of small parts that snap together:
 
-targets -- is a list of target data types that are supported along with in app information such as mime types of those files that can be dragged along with some.
+A **list model**
+: holds the data. `Gio.ListStore` is the usual one. It holds GObjects — not tuples,
+  not strings — so each row is an object with properties.
 
-actions -- are the actions that are to be taken with the drag and include the following:
+A **factory**
+: builds row widgets and fills them in. `Gtk.SignalListItemFactory` does this with
+  two signals: `setup` creates an empty row, `bind` points an existing row at an item.
 
-- gtk.gdk.ACTION\_DEFAULT
-- gtk.gdk.ACTION\_COPY
-- gtk.gdk.ACTION\_MOVE
-- gtk.gdk.ACTION\_LINK
-- gtk.gdk.ACTION\_PRIVATE
-- gtk.gdk.ACTION\_ASK
+A **selection model**
+: wraps the list model and tracks what is selected. `Gtk.SingleSelection`,
+  `Gtk.MultiSelection`, `Gtk.NoSelection`.
 
-The only action we will be using is gtk.gdk.ACTION\_COPY and this is only on non win32 systems. For whatever reason I do not believe anything really works on a Windows system properly. I believe this actually because I have never properly been able to get a target properly specified, thus it never works on Windows so I have never bothered to go beyond drag\_dest\_set(0, [], 0). I see no point.
+A **view**
+: draws it. `Gtk.ListView` for a list, `Gtk.ColumnView` for a table,
+  `Gtk.GridView` for tiles.
 
-With that you can drag a file(s) anywhere into application then bother sorting out where it goes based on the file type that it is. I am sure in more complicated applications that this would not be enough but I have never personally needed more then this.
+They chain: store → (filter) → (sort) → selection → view.
 
-Now back to targets on anything other then Windows (Linux programs). For a target we will want to set up its file type. It will be in the form of (string, int, int).
+The reason for all these parts is **recycling**. A `GtkTreeView` built a row widget
+for every row you had. A `GtkListView` builds enough row widgets to fill the visible
+area and reuses them as you scroll, which is why it can hold a million items without
+noticing. `setup` runs once per *widget*; `bind` runs every time a widget is pointed
+at a different *item*.
 
-So what we will end up with for the target will be something such as ("text/plain", 0, TARGET\_STRING). TARGET\_STRING must be an integer assigned above. It is a number that keeps track of the target throughout the program.
+### The item type {#list-item-type}
 
-For flags we will probably just want to go with gtk.DEST\_DEFAULT\_ALL covering all the flags leaving us with less typing.
-
-As I said before we will only use gtk.gdk.ACTION\_COPY for the actions part and this will only be for the part that are running on Linux systems.
-
-So what we end up with on Linux is a function call that looks like this:
-
-```python
-drag_dest_set(gtk.DEST_DEFAULT_DROP, [("text/plain", 0,
-TARGET_STRING), ("image/*", 0, TARGET_IMAGE)],
-gtk.gdk.ACTION_COPY)
-```
-
-While on windows we will only be using a much smaller:
+Rows are objects, so start by defining one:
 
 ```python
-drag_dest_set(0, [], 0)
+class Task(GObject.Object):
+    __gtype_name__ = "Task"
+
+    title = GObject.Property(type=str, default="")
+    done = GObject.Property(type=bool, default=False)
+
+    def __init__(self, title, done=False):
+        super().__init__(title=title, done=done)
 ```
 
-We will need to attach this to a widget. In our case the widget will be the main window:
+`GObject.Property` rather than a plain attribute, and `__gtype_name__` so the type
+has a name on the C side. Both matter: property expressions, sorters, filters and
+`bind_property` all reach data through the GObject property system, and none of them
+can see a plain Python attribute.
+
+A plain Python attribute still works for anything you only ever read in Python. Use
+properties for the values the view needs to know about.
+
+### A list {#list-view}
 
 ```python
-win = gtk.Window()
-win.set_size_request(400, 400)
-if sys.platform == "win32":
-    win.drag_dest_set(0, [], 0)
-else:
-    win.drag_dest_set(gtk.DEST_DEFAULT_DROP,
-        [("text/plain", 0, TARGET_STRING),
-        ("image/*, 0, TARGET_IMAGE)],
-        gtk.gdk.ACTION_COPY)
+store = Gio.ListStore(item_type=Task)
+for title in ("Buy milk", "Write chapter two", "Walk the dog"):
+    store.append(Task(title))
+
+factory = Gtk.SignalListItemFactory()
+factory.connect("setup", on_setup)
+factory.connect("bind", on_bind)
+
+selection = Gtk.SingleSelection(model=store)
+view = Gtk.ListView(model=selection, factory=factory)
 ```
 
-The thing is that using more then the method that is being used for Windows is not needed for this program and I am only showing the other version for Linux just to introduce flags, targets, and actions.
-
-Now that drag\_dest\_set has been attached to our main window widget we need to handle three singles:
-
-- drag\_motion
-- drag\_drop
-- drag\_data\_received
-
-What we do is connect them to three functions like so:
+The factory handlers:
 
 ```python
-win.connect("drag_motion", self.motion_cb)
-win.connect("drag_drop", self.drop_cb)
-win.connect("drag_data_received", self.drag_data_received)
+def on_setup(_factory, list_item):
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+    box.append(Gtk.CheckButton())
+    box.append(Gtk.Label(xalign=0))
+    list_item.set_child(box)
+
+
+def on_bind(_factory, list_item):
+    task = list_item.get_item()
+    box = list_item.get_child()
+    check, label = box.get_first_child(), box.get_last_child()
+    label.set_text(task.title)
+    check.set_active(task.done)
 ```
 
-How this works is not very important for our purposes. We just want it accepting images for us. If you want more information on how this works check out the PyGTK drag and drop tutorial at <http://pygtk.org/pygtk2tutorial/ch-DragAndDrop.html> or check out the drag and drop demo included in the PyGTK source code found at <http://www.pygtk.org>.
+Two rules follow from recycling, and breaking either produces the same symptom —
+data from the wrong row appearing in a row:
 
-One last thing that I want to mention is that in the function drag\_data\_received we will be detecting if the files are in an accepted list of file types. If they are, in this example we add them to a list. What we will do in the slide show program is add them to the Item list in the GUI using a TreeView.
+**Never create widgets in `bind`.** It runs on every scroll. Create in `setup`,
+fill in `bind`.
 
-What you should end up with when everything is said and done is some source code that is similar to the following.
+**Undo in `unbind` whatever you did in `bind`.** If `bind` connects a signal or
+creates a binding, the row keeps it when it is recycled onto a different item. That
+is what `unbind` is for:
 
 ```python
-import pygtk
-import gtk
-import sys
-import os
+def on_bind(_factory, list_item):
+    ...
+    list_item.binding = check.bind_property(
+        "active", task, "done", GObject.BindingFlags.BIDIRECTIONAL
+    )
 
-class DragDropExample:
-    def __init__(self):
-        TARGET_STRING = 82
-        TARGET_IMAGE = 83
-        self.file_list=[] # list to hold our images
-        self.accepted_types = ["jpg", "jpeg", "png", "gif", "bmp"]
 
-        win = gtk.Window()
-        win.set_size_request(400, 400)
-        win.connect("delete_event", lambda w,e: gtk.main_quit())
-
-        vbox = gtk.VBox(False, 0)
-        hello = gtk.Label("Test label to drag images to.")
-        vbox.pack_start(hello, True, True, 0)
-        win.add(vbox)
-
-        if sys.platform=="win32":
-            # gtk.DEST_DEFAULT_DROP, does not work on windows
-            # because will not match list of possible target
-            # matches if you set anything besides a blank []
-            # for target on Microsoft windows, it will not call
-            # drop_data_received. So we might as well leave it
-            # like so and do your own detecting of the files
-            # and what to do with them in drag_data_received.
-
-            win.drag_dest_set(0, [], 0)
-        else:
-            win.drag_dest_set(gtk.DEST_DEFAULT_DROP,
-                [("text/plain", 0, TARGET_STRING),
-                ("image/*", 0, TARGET_IMAGE)],
-                gtk.gdk.ACTION_COPY)
-
-        win.connect("drag_motion", self.motion_cb)
-        win.connect("drag_drop", self.drop_cb)
-        win.connect("drag_data_received",
-            self.drag_data_received)
-        win.show_all()
-
-    def motion_cb(self, wid, context, x, y, time):
-        context.drag_status(gtk.gdk.ACTION_COPY, time)
-        return True
-
-    def drop_cb(self, wid, context, x, y, time):
-        print "drop"
-        if context.targets:
-            wid.drag_get_data(context, context.targets[0], time)
-            print "" .join([str(t) for t in context.targets])
-            return True
-        return False
-
-    def drag_data_received(self, img, context, x, y, data, info, time):
-        if data.format == 8:
-            print "Received %s " % data.data
-
-        # Checking for valid file types
-        test_data = os.path.splitext(data.data)[1][1:4].lower().strip()
-        if test_data in self.accepted_types:
-            if sys.platform=="win32":
-                # Remove the file:/// on window systems.
-                self.file_list.append(data.data[8:])
-                print data.data[8:]
-            else:
-                # Remove the file:// on linux systems.
-                self.file_list.append(data.data[7:])
-                print data.data[7:]
-            context.finish(True, False, time)
-        else:
-            context.finish(False, False, time)
-
-if __name__ == "__main__":
-    DragDropExample()
-    gtk.main()
+def on_unbind(_factory, list_item):
+    binding = getattr(list_item, "binding", None)
+    if binding is not None:
+        binding.unbind()
+        list_item.binding = None
 ```
 
-## List Boxes - gtk.TreeView
+`bind_property` is worth knowing on its own: it keeps two GObject properties in
+sync with no callback at all. Here, ticking the check button writes straight
+through to `task.done`, and changing `task.done` in code moves the check button.
 
-A list box in PyGTK is a little more difficult then programming one on Windows with winforms. With PyGTK you must use a TreeView. A true view is relatively complicated to use for just a list box, but it is all that is available. A wrapper can be made around a TreeView to form a generic list box. But this will not be included in this code.
+A list view scrolls, but it does not scroll itself — put it in a
+`Gtk.ScrolledWindow`.
 
-A treeview takes the form of gtk.TreeView(model). The model is the type of the item being stored. What will be used here is gtk.ListStore(type).
+The full example is `examples/gtk4/list-view.py`.
 
-The type of a ListStore is can be any valid python type (str, int, etc...). This stores the type data and each type becomes a column in a row.
+### A sortable table {#column-view}
 
-With the information we now have we can create the tree like so:
+`Gtk.ColumnView` is a list view with columns. Each column has its own factory, so
+each cell in that column is built and filled the same way:
 
 ```python
-liststore = gtk.ListStore(str)
-treeview = gtk.TreeView(liststore)
+factory = Gtk.SignalListItemFactory()
+factory.connect("setup", setup)
+factory.connect("bind", bind)
+
+column = Gtk.ColumnViewColumn(title="Name", factory=factory)
+column.set_expand(True)
+view.append_column(column)
 ```
 
-The above code will create a list box with 1 column. Also it is possible to set the type of modal of the TreeView after creating an instance.
+Sorting is done by the model, not the view. A column gets a sorter; the view
+combines the sorters of whichever column headers were clicked; a `Gtk.SortListModel`
+sorts the data through that combined sorter:
 
 ```python
-treeview.set_model(liststore)
+expression = Gtk.PropertyExpression.new(Package, None, "name")
+column.set_sorter(Gtk.StringSorter(expression=expression))
+...
+sorted_model = Gtk.SortListModel(model=store)
+sorted_model.set_sorter(view.get_sorter())
 ```
 
-Now, to make this useful a CellRenderer is needed. I will be using a CellRendererText.
+A `Gtk.Expression` is a compiled way of reading a value out of an object.
+`Gtk.PropertyExpression.new(Package, None, "name")` means "the `name` property of a
+`Package`", and it is evaluated in C, so sorting a large list does not run Python
+per comparison. Use `Gtk.NumericSorter` for numbers — a `Gtk.StringSorter` on a size
+column will happily sort 1,000 before 900.
+
+Filtering works the same way, one model further up the chain:
 
 ```python
-cell = gtk.CellRendererText()
+text_filter = Gtk.StringFilter(
+    expression=Gtk.PropertyExpression.new(Package, None, "name"),
+    match_mode=Gtk.StringFilterMatchMode.SUBSTRING,
+)
+filtered = Gtk.FilterListModel(model=store, filter=text_filter)
+
+search = Gtk.SearchEntry()
+search.connect("search-changed", lambda e: text_filter.set_search(e.get_text()))
 ```
 
-The cell is what is used to display the data from the treeview model (liststore) to the user. The cell is then added to a gtk.TreeViewColumn like so:
+The whole chain is store → filter → sort → selection → view, and each link is a
+list model in its own right. Nothing copies the data; each wrapper is a view onto
+the one below. That is why you can filter a list while a selection is live and get
+sensible behaviour.
+
+For a filter that Python has to decide, use `Gtk.CustomFilter`:
 
 ```python
-treeviewcolumn = gtk.TreeViewColumn("Button Pushed", cell, text=0)
+recent = Gtk.CustomFilter.new(lambda item: item.size > 5_000)
 ```
 
-The above code will create a TreeViewColumn with a column header of "Button Pressed" assigned the data from the CellRendererText "cell" and display the cells text to column 0.
+The full example is `examples/gtk4/column-view.py`.
 
-With the treeviewcolumn created we go ahead and append it to the treeview that we created:
+### Choosing between the views {#which-view}
+
+`Gtk.ListView`
+: one column of rows, uniform height, arbitrarily long.
+
+`Gtk.ColumnView`
+: a table with sortable, resizable columns.
+
+`Gtk.GridView`
+: tiles, for thumbnails.
+
+`Gtk.ListBox`
+: rows you add as widgets, with no factory and no recycling. Fine for a settings
+  page or a sidebar of a dozen items; wrong for anything that grows. libadwaita's
+  rows (`Adw.ActionRow`, `Adw.SwitchRow`, `Adw.EntryRow`) go in one of these.
+
+If the list is short and fixed, `Gtk.ListBox` is much less code. If it comes from
+data, use a list view.
+
+## File dialogs {#file-dialogs}
+
+`GtkFileChooserDialog` is deprecated. `Gtk.FileDialog` replaces it, with the same
+asynchronous shape as `Gtk.AlertDialog`:
 
 ```python
-treeview.append_column(treeviewcolumn)
+dialog = Gtk.FileDialog(title="Open a file")
+dialog.set_filters(text_filters())
+dialog.open(window, None, on_opened, label)
+
+
+def on_opened(dialog, result, label):
+    try:
+        file = dialog.open_finish(result)
+    except GLib.Error:
+        return          # cancelled
+    print(file.get_path())
 ```
 
-To append data to a treeview you use the following code:
+There is `open()`, `save()`, `select_folder()` and their plural forms
+(`open_multiple()`), each with a matching `*_finish()`. All of them raise
+`GLib.Error` when the user cancels.
+
+Filters are a list model of `Gtk.FileFilter`:
 
 ```python
-model = treeview.get_model()
-model.append(["Your Message"])
+filters = Gio.ListStore(item_type=Gtk.FileFilter)
+
+text = Gtk.FileFilter()
+text.set_name("Text files")
+text.add_mime_type("text/plain")
+text.add_suffix("txt")
+filters.append(text)
+
+dialog.set_filters(filters)
 ```
 
-To remove a selected row from a TreeView you would use the following code:
+### You get a GFile, not a path {#gfile}
+
+`open_finish()` returns a `Gio.File`. It is tempting to call `get_path()` and hand
+the string to `open()`, and for a local file that works. It is worth resisting:
 
 ```python
-selection = self.treeview.get_selection()
-model, iter = selection.get_selected()
-if iter:
-model.remove(iter)
-return
+ok, contents, _etag = file.load_contents(None)
+text = contents.decode("utf-8", "replace")
+
+file.replace_contents(b"...", None, False, Gio.FileCreateFlags.NONE, None)
 ```
 
-If you want more then 1 column you have to create a CellRenderer and TreeViewColumn for each and append to the treeview. You must also have a data type in the ListStore for each column that you will be using. Examine the code below to see how this is applied to making a small program with two columns.
+`get_path()` returns `None` for anything that is not a local file — a document on a
+remote share, an attachment, a file handed over by the desktop portal. Under
+Flatpak, `Gtk.FileDialog` is answered by the **file portal**: the user picks a file
+in a dialog drawn by the desktop, and your sandbox is granted access to just that
+one file. `Gio.File` handles all of it; a raw path does not.
+
+The full example is `examples/gtk4/file-dialog.py`.
+
+## Drag and drop {#drag-and-drop}
+
+Drag and drop moved onto event controllers along with the rest of input handling.
+A widget that can be dragged gets a `Gtk.DragSource`; a widget that can receive gets
+a `Gtk.DropTarget`. There are no `drag_source_set()` calls and no
+`drag-data-received` signal.
+
+The source says what is being dragged by returning a content provider:
 
 ```python
-import pygtk
-pygtk.require("2.0")
-import gtk
+def on_prepare(_source, _x, _y):
+    value = GObject.Value(str, text)
+    return Gdk.ContentProvider.new_for_value(value)
 
-class TreeViewExample:
-    def __init__(self):
-        # Count the items in the item list
-        self.counter = 0
 
-        self.win = gtk.Window()
-        self.win.set_size_request(400, 400)
-        self.win.connect("delete_event", lambda w,e: gtk.main_quit())
-
-        vbox = gtk.VBox(False, 0)
-        hbox = gtk.HBox(False, 0)
-        add_button = gtk.Button("Add Item")
-        add_button.connect("clicked", self.add_button_clicked)
-
-        remove_button = gtk.Button("Remove Item")
-        remove_button.connect("clicked", self.remove_button_clicked)
-
-        # Treeview Stuff
-        self.liststore = gtk.ListStore(str, str)
-        self.treeview = gtk.TreeView(self.liststore)
-
-        # Add cell and column.
-        # data added to treeview.
-        self.cell = gtk.CellRendererText()
-        self.cell2 = gtk.CellRendererText()
-
-        # text=number is the column the text is displayed from
-        self.treeviewcolumn = gtk.TreeViewColumn("Button Pushed",
-            self.cell, text=0)
-        self.treeviewcolumn2 = gtk.TreeViewColumn(
-"Second Useless Column", self.cell2, text=1)
-
-        self.treeview.append_column(self.treeviewcolumn)
-        self.treeview.append_column(self.treeviewcolumn2)
-
-        vbox.pack_start(self.treeview, True, True, 0)
-        vbox.pack_start(hbox, False, True, 0)
-        hbox.pack_start(add_button, True, True, 0)
-        hbox.pack_start(remove_button, True, True, 0)
-        self.win.add(vbox)
-        self.win.show_all()
-
-    def add_button_clicked(self, w):
-        self.counter += 1
-        model = self.treeview.get_model()
-        model.append(["Add Button Pushed %s times"
-            % self.counter, "Column 2 Message"])
-
-    def remove_button_clicked(self, w):
-        selection = self.treeview.get_selection()
-        model, iter = selection.get_selected()
-        if iter:
-            model.remove(iter)
-            return
-
-if __name__ == "__main__":
-    TreeViewExample()
-    gtk.main()
+source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
+source.connect("prepare", on_prepare)
+label.add_controller(source)
 ```
 
-For a much more detailed look at the available options in a TreeView visit: <http://pygtk.org/pygtk2tutorial/ch-TreeViewWidget.html>
+Returning `None` from `prepare` refuses the drag, which is how you make some rows
+draggable and others not.
 
-### Single Click - Multiple Select
-
-Say that multiple items in the list need to be selected and by single clicking. This will be difficult to accomplish quickly wading through the official documentation[^2]. Basically a few things need to be added to the above TreeView example.
-
-First of all the *selection* that is created in `remove_button_clicked` needs to be removed as it will now be created in the \_\_init\_\_ method. Now selection is a class instance variable `self.selection`, change the code to match.
-
-So in the \_\_init\_\_ method after
+Give the drag something visible to carry, or the pointer drags nothing at all:
 
 ```python
-self.treeview = gtk.TreeView(self.liststore)
+def on_drag_begin(source, _drag):
+    source.set_icon(Gtk.WidgetPaintable.new(label), 0, 0)
 ```
 
-Please add the following two lines of code.
+The target declares the type it accepts and returns `True` from `drop` if it took
+the data:
 
 ```python
-self.selection = self.treeview.get_selection()
-self.selection.set_mode(gtk.SELECTION_MULTIPLE)
+def on_drop(_target, value, _x, _y):
+    label.set_text(f"Got: {value}")
+    return True
+
+
+target = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.COPY)
+target.connect("drop", on_drop)
+frame.add_controller(target)
 ```
 
-These two lines create the selection as a class level instance and set it up to allow multiple selections. Now to work with this the *changed* signal is emitting and needs to be connected to.
+`enter` and `leave` are where the highlight goes — a drop target that gives no
+feedback feels broken even when it works.
+
+Because everything travels as a `GValue`, dragging your own objects between two
+lists in your own program needs no serialisation:
+`Gdk.ContentProvider.new_for_value(GObject.Value(Task, task))`. Dragging to another
+application needs a type that application understands: `GObject.TYPE_STRING` for
+text, `Gio.File` for files.
+
+The full example is `examples/gtk4/drag-and-drop.py`.
+
+## Images and pictures {#images}
+
+There are two widgets, and picking the wrong one is the usual cause of an image
+that refuses to grow past 16 pixels.
+
+`Gtk.Image` is for **icons**. It sizes itself from the icon theme and ignores how
+much room it has:
 
 ```python
-self.selection.connect("changed", self.on_media_files_changed)
+icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic")
+icon.set_pixel_size(48)
 ```
 
-The above lines connects the *changed* signal that is emitted by single clicks on items to call `self.on_treeview_changed`.
+`Gtk.Picture` is for **content**. It scales to the space it is given:
 
 ```python
-def on_media_files_changed(self, widget=None, event=None):
-  model, path = self.selection.get_selected_rows()
-  for x in path:
-    print model[x[0]][0] # model[path][column]
+texture = Gdk.Texture.new_from_filename("sample.jpg")
+picture = Gtk.Picture.new_for_paintable(texture)
+picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+picture.set_vexpand(True)
 ```
 
-This method does not do much in its current form. What it does do is retrieve all the selected rows and prints out their values from column one.
+`GdkPixbuf` still exists and still loads files, but `Gdk.Texture` is the modern
+path: decoded once, held on the GPU, drawn without a copy per frame. Use
+`Gdk.Texture.new_from_filename()` or `new_from_resource()` unless you need to
+manipulate pixels, in which case load a pixbuf and convert with
+`Gdk.Texture.new_for_pixbuf()`.
 
-## Status Icons
+`set_content_fit()` takes `CONTAIN` (fit inside, keep aspect), `COVER` (fill, crop),
+`FILL` (stretch) or `SCALE_DOWN` (never enlarge).
 
-Status Icons can be useful for different reasons. Personally I like to use them to hide long running applications such as my music player. I set it playing then just minimize it to the notification area on my panel. If I want to to do something with it I left click the status icon and my music player pops up. If I want to switch songs I right click on it and it pops up menu with some options, one of which includes moving to the next song.
+The full example is `examples/gtk4/images.py`.
 
-Creating a status icons is a matter of one line of code to make it display.
+## Tooltips {#tooltips}
 
 ```python
-icon = gtk.status_icon_new_from_stock(gtk.STOCK_ABOUT)
+button.set_tooltip_text("Save the document")
+button.set_tooltip_markup("Save the <b>document</b>")
 ```
 
-This creates a status icon with an icon set to the stock GTK icon[^3] about.
+That is the whole API for the common case. Tooltips belong on icon-only buttons,
+where they are the only thing naming the action, and they should say what the
+control does rather than repeating its label.
 
-Then it is a matter of adding two more lines of code to add left and right click ability to it.
+For a tooltip whose text depends on what is under the pointer, set
+`has-tooltip` and handle `query-tooltip`.
+
+## Building interfaces from UI files {#ui-files}
+
+Writing a layout in Python is fine until it is a hundred lines of `append()`. The
+alternative is a `.ui` file: GTK's own XML, loaded by `Gtk.Builder`.
+
+**Glade is not an option any more.** It never gained GTK 4 support and is
+unmaintained. What replaced it:
+
+- Write the XML by hand. It is verbose but obvious, and it is what the other tools
+  produce.
+- **Blueprint** — a compact language that compiles to `.ui`. Most new GNOME
+  applications use it.
+- **Cambalache** — a graphical designer that does support GTK 4 and libadwaita.
+
+The libglade format and `gtk-builder-convert` are long gone; if you have a `.glade`
+file from the GTK 2 days, it is a rewrite rather than a conversion.
+
+### GtkTemplate {#gtk-template}
+
+You can load a `.ui` file and pull widgets out of it by id, but the pleasant way is
+`Gtk.Template`, which binds a Python class to a `<template>` element:
+
+```xml
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="ExampleWindow" parent="GtkApplicationWindow">
+    <property name="title">Built from a UI file</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar"/>
+    </child>
+    <property name="child">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkEntry" id="name_entry">
+            <property name="placeholder-text" translatable="yes">Your name</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="greet_button">
+            <property name="label" translatable="yes">Greet me</property>
+            <signal name="clicked" handler="on_greet_clicked" swapped="no"/>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="greeting"/>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>
+```
 
 ```python
-icon.connect('popup-menu', on_right_click)
-icon.connect('activate', on_left_click)
+@Gtk.Template(filename=str(UI_FILE))
+class ExampleWindow(Gtk.ApplicationWindow):
+    __gtype_name__ = "ExampleWindow"
+
+    name_entry = Gtk.Template.Child()
+    greet_button = Gtk.Template.Child()
+    greeting = Gtk.Template.Child()
+
+    @Gtk.Template.Callback()
+    def on_greet_clicked(self, _button):
+        name = self.name_entry.get_text().strip() or "stranger"
+        self.greeting.set_text(f"Hello, {name}!")
 ```
 
-The first line here adds signal handling to catch the *popup-menu* signal. This is caught on when a right click happens. When the popup-menu signal is detected the on\_right\_click function is called.
+Three names have to agree, and when they do not the error message is not always
+helpful:
 
-The second line detects the *activate* signal when the status icon is left clicked and calls the on\_left\_click function.
+- `__gtype_name__` on the class must equal the `class` attribute of `<template>`.
+- Each `Gtk.Template.Child()` attribute name must equal an `id` in the file.
+- Each `handler` named in a `<signal>` must exist on the class and be decorated
+  with `@Gtk.Template.Callback()`.
 
-As the example below will show, the programmer is responsible for creating the popup menu. The Status Icon Example creates a status icon, and then connects to the *popup-menu* and *activate* signal. When the popup-menu signal is activated, the on\_right\_click function creates and shows a popup menu by calling the make\_menu function.
+`translatable="yes"` marks a string for translation, and `xgettext` reads it
+straight out of the XML — see [Internationalization](10-internationalization.html).
 
-The make\_menu function displays a menu with the options Open App and Close App. Clicking on Open App will call the function open\_app which will display a message dialog by calling the function message. The same thing happens when Close App is clicked.
+Shipping the `.ui` file next to the `.py` file works while you develop. For
+anything you install, compile the files into a **GResource** bundle and load them
+with `Gtk.Template(resource_path=...)`: one file to install, and the data is
+compiled into the binary rather than looked up on disk. That is covered with the
+rest of installation in the packaging chapter.
 
-Basically this is how a status icon works; just substitute the actions and functions here for what is needed for your application.
+The full example is `examples/gtk4/builder/`.
 
-Status Icon Example
+## Notifications, not status icons {#notifications}
+
+`GtkStatusIcon` is gone, and the system tray it drew into is not part of GNOME. If
+your program needs to say "something finished" while the user is looking at
+something else, send a notification:
 
 ```python
-#!/usr/bin/env python
-import gtk
+notification = Gio.Notification.new("Export finished")
+notification.set_body("holiday-photos.zip is ready in your Downloads folder.")
+notification.set_icon(Gio.ThemedIcon.new("document-save-symbolic"))
+notification.add_button("Show it", "app.reveal")
+notification.set_default_action("app.reveal")
 
-def message(data=None):
-  """
-  Function to display messages to the user.
-  """
-  msg=gtk.MessageDialog(None, gtk.DIALOG_MODAL,
-    gtk.MESSAGE_INFO, gtk.BUTTONS_OK, data)
-  msg.run()
-  msg.destroy()
-
-def open_app(data=None):
-  message(data)
-
-def close_app(data=None):
-  message(data)
-  gtk.main_quit()
-
-def make_menu(event_button, event_time, data=None):
-  menu = gtk.Menu()
-  open_item = gtk.MenuItem("Open App")
-  close_item = gtk.MenuItem("Close App")
-
-  #Append the menu items
-  menu.append(open_item)
-  menu.append(close_item)
-  #add callbacks
-  open_item.connect_object("activate", open_app, "Open App")
-  close_item.connect_object("activate", close_app, "Close App")
-  #Show the menu items
-  open_item.show()
-  close_item.show()
-
-  #Popup the menu
-  menu.popup(None, None, None, event_button, event_time)
-
-def on_right_click(data, event_button, event_time):
-  make_menu(event_button, event_time)
-
-def on_left_click(event):
-  message("Status Icon Left Clicked")
-
-if __name__ == '__main__':
-  icon = gtk.status_icon_new_from_stock(gtk.STOCK_ABOUT)
-  icon.connect('popup-menu', on_right_click)
-  icon.connect('activate', on_left_click)
-  gtk.main()
+app.send_notification("export-done", notification)
 ```
 
-## File choosers
-
-File choosers are used to select files to open or to display a save dialog to the user. This section will cover the gtk.FileChooserDialog, gtk.FileChooserButton, and will also cover using native Windows file choosers when on Windows.
-
-### gtk.FileChooserDialog
-
-The FileChooserDialog class provides an easy to use way to display a file chooser or save dialog to end users. It is created with a few options and then is run returning succuss or failure. To start off here is a GUI with two buttons and a file filter declard that will be used to launch the file chooser and save dialog.
-
-```python
-def main():
-  #file filters used with the filechoosers
-  text_filter=gtk.FileFilter()
-  text_filter.set_name("Text files")
-  text_filter.add_mime_type("text/*")
-  all_filter=gtk.FileFilter()
-  all_filter.set_name("All files")
-  all_filter.add_pattern("*")
-
-  window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-  window.set_title("Filechooser Example")
-  window.connect("destroy", lambda wid: gtk.main_quit())
-  window.connect("delete_event", lambda e1,e2:gtk.main_quit())
-
-  button_save = gtk.Button("Save File")
-  button_open = gtk.Button("Open File")
-  button_save.connect("clicked", on_save_clicked, text_filter, all_filter)
-  button_open.connect("clicked", on_open_clicked, text_filter, all_filter)
-  hbox = gtk.HBox(True, 0) hbox.pack_start(button_save, True, True, 5)
-  hbox.pack_start(button_open, True, True, 5)
-
-  window.add(hbox) window.show_all()
-```
-
-As can be seen in the code above, the first thing that is done is to seta gtk.FileFilter. One filter for text files and one filter that will be for all file types. The text that is displayed with a file filter is created with the method set\_name and the pattern is set using the set\_pattern method. For every pattern that is to be matched against there needs to be an instance of the gtk.FileFilter.
-
-Then the GTK window is created. After this two buttons are created; the button\_save and button\_open buttons. When these buttons are clicked they pass the filters that were created at the top of the function to their respective callback functions.
-
-Now to focus on on the details of filechooser dialogs. First is the save dialog.
-
-```python
-def on_save_clicked(widget, text_filter=None, all_filter=None):
-  filename=None
-  dialog=gtk.FileChooserDialog(title="Select a File",
-    action=gtk.FILE_CHOOSER_ACTION_SAVE,
-    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE,
-    gtk.RESPONSE_OK))
-
-  if (text_filter != None) and (all_filter != None):
-    dialog.add_filter(text_filter)
-    dialog.add_filter(all_filter)
-
-  response = dialog.run()
-  if response == gtk.RESPONSE_OK:
-    filename = dialog.get_filename()
-  elif response == gtk.RESPONSE_CANCEL:
-    print 'Cancel Clicked' dialog.destroy()
-
-  if filename != None:
-    save_file=open(filename, 'w')
-    save_file.write("Sample Data")
-    save_file.close()
-  print filename
-```
-
-The on\_save\_clicked function starts off by setting the filename to None and quickly sets up the dialog. The dialog title is set to "Select a File". The action type of the dialog is set to save using gtk.FILE\_CHOOSER\_ACTION\_SAVE. The buttons are set with a tuple. The button uses the stock cancel using the gtk.RESPONSE\_CANCEL and the stock save button that uses the gtk.RESPONSE\_OK when it is clicked.
-
-After this the function checks to see if there are any filters that should be applied and if so it applies them.
-
-After the filters are added, the dialog is run with its return value assigned to the variable response.
-
-```python
-response = dialog.run()
-```
-
-It then checks the value of response to be of gtk.RESPONSE\_OK and if so assigns the name of the file to the variable filename using:
-
-```python
-filename = dialog.get_filename()
-```
-
-If the response is set to gtk.RESPONSE\_CANCEL, no actions are taken.
-
-The last action to take with the dialog is to call the destroy method. If the destroy method is not called the dialog will stay on the screen.
-
-```python
-dialog.destroy()
-```
-
-The final part of the on\_save\_clicked function is to save the string "Sample Data" to the file that was specified to save to.
-
-The on\_open\_clicked function is very similar to the on\_save\_clicked function. Instead of opening a dialog to save a file it opens a dialog to select a file for the application to load.
-
-```python
-def on_open_clicked(widget, text_filter=None, all_filter=None):
-  filename=None
-  dialog=gtk.FileChooserDialog(title="Select a File",
-    action=gtk.FILE_CHOOSER_ACTION_OPEN,
-    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-    gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-
-  if (text_filter != None) and (all_filter != None):
-    dialog.add_filter(text_filter)
-    dialog.add_filter(all_filter)
-
-  response = dialog.run()
-  if response == gtk.RESPONSE_OK:
-    filename = dialog.get_filename()
-  elif response == gtk.RESPONSE_CANCEL:
-    print 'Cancel Clicked'
-
-  dialog.destroy()
-  print "File Choosen: ", filename
-```
-
-Just like in the on\_save\_clicked function the on\_open\_clicked starts off by setting the filename to None. Then it sets up the open dialog using the gtk.FileChooserDialog. It sets the dialog title to "Select a File", the action to open with gtk.FILE\_CHOOSER\_ACTION\_OPEN. The buttons for the dialog are set as a tuple with the button type and button response next to each other. It sets a cancel button with gtk.STOCK\_CANCEL with a response of gtk.RESPONSE and open button with gtk.STOCK\_OPEN with a response of gtk.RESPONSE\_OK.
-
-After it checks to see if there are filters set and if so adds filters to the dialog using the add\_filter method.
-
-The dialog is run using the run method and assigns the response to the variable response like so:
-
-```python
-response = dialog.run()
-```
-
-The on\_open\_clicked function then checks the value of the response variable. If the response is gtk.RESPONSE\_OK the file name is set by using the dialogs get\_filename() method.
-
-```python
-filename = dialog.get_filename()
-```
-
-If the response is gtk.RESPONSE\_CANCEL no action is taken. The very last action that is taken is to call the dialogs destroy method.
-
-```python
-dialog.destroy()
-```
-
-If the destroy method is not called the dialog will stay on screen.
-
-### gtk.FileChooserButton
-
-The gtk.FileChooserButton eases the use of a open file dialog by taking care of the run and destroy code and also provides a button. This is easier than the previous section on the FileChooserDialog.
-
-File Chooser Button
-
-```python
-def main():
-  #file filters used with the filechoosers
-  text_filter=gtk.FileFilter()
-  text_filter.set_name("Text files")
-  text_filter.add_mime_type("text/*")
-  all_filter=gtk.FileFilter()
-  all_filter.set_name("All files")
-  all_filter.add_pattern("*")
-
-  window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-  window.set_title("Native Filechooser")
-  window.connect("destroy", lambda wid: gtk.main_quit())
-  window.connect("delete_event", lambda e1,e2:gtk.main_quit())
-
-  button_open = gtk.FileChooserButton("Open File")
-  button_open.add_filter(text_filter)
-  button_open.add_filter(all_filter)
-  button_open.connect("selection-changed", on_file_selected)
-
-  window.add(button_open)
-  window.show_all()
-
-def on_file_selected(widget):
-  filename = widget.get_filename()
-  print "File Choosen: ", filename
-
-if __name__ == "__main__":
-  main()
-  gtk.main()
-```
-
-This example starts by creating two filter types using the gtk.FileFilter class. One filter for text files and one filter for any type of file. Skip a few lines and a FileChooserButton is created like this:
-
-```python
-button_open = gtk.FileChooserButton("Open File")
-```
-
-To retrieve the selected file from a FileChooserButton it must connect the *selection-changed* signal to a function. So this example connects the selection-changed signal to the on\_file\_selected function. The on\_file\_selected function retrieves the filename that was choosen and then prints it.
-
-### Windows File Chooser
-
-The native GTK filechoosers are generally ok, but they are very ugly if the GTK application is running on Windows. For PyGTK apps that are running on Windows the option exists to use a native Windows file chooser dialog. The following example will show how to open a file and to save a file. This example will require that the pywin32 package be installed[^4].
-
-First off the os, win32con, and win32gui modules will need to be imported along with the pygtk and gtk modules.
-
-```python
-import os
-import win32gui, win32con
-```
-
-Like all the other examples about file choosers the Windows file chooser will start off with some GUI code.
-
-```python
-def main():
-  file_filter="""Text files\0*.txt\0All Files\0*.*\0"""
-
-  window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-  window.set_title("Windows Filechooser Example")
-  window.connect("destroy", lambda wid: gtk.main_quit())
-  window.connect("delete_event", lambda e1,e2:gtk.main_quit())
-
-  button_save = gtk.Button("Save File")
-  button_open = gtk.Button("Open File")
-  button_save.connect("clicked", on_save_clicked, file_filter)
-  button_open.connect("clicked", on_open_clicked, file_filter)
-
-  hbox = gtk.HBox(True, 0)
-  hbox.pack_start(button_save, True, True, 5)
-  hbox.pack_start(button_open, True, True, 5)
-
-  window.add(hbox) window.show_all()
-```
-
-First thing that is done is to create a file filter that will be used with the open and save dialogs. The file filter is in the form of "Display Name, Seperator, File Type, Seperator, Display Name, Seperator, File Type, Seperator" and looks like this:
-
-```python
-file_filter="""Text files\0*.txt\0All Files\0*.*\0"""
-```
-
-The GUI creates one button to launch the save dialog and one to launch the open dialog. The button called button\_save is clicked it will call the on\_save\_clicked function passing along the file filter. When the button called button\_open is clicked, it will call the on\_open\_clicked function passing along the file filter.
-
-The on\_save\_clicked and on\_open\_clicked function are very similar in form with some minor differences. Here is the on\_save\_clicked function.
-
-```python
-def on_save_clicked(widget, file_filter=None):
-  filename=None
-  try:
-    filename, customfilter, flags=win32gui.GetSaveFileNameW(
-      InitialDir=os.path.join(os.environ['USERPROFILE'],"My Documents"),
-      Flags=win32con.OFN_ALLOWMULTISELECT|win32con.OFN_EXPLORER, File='',
-      DefExt='txt', Title='Save a File', Filter=file_filter, FilterIndex=0)
-  except win32gui.error:
-    print "Cancel clicked"
-
-  print filename
-  if filename != None:
-    save_file = open(filename, 'w')
-    save_file.write("Test Save Data")
-    save_file.close()
-  return filename
-```
-
-This is a simple funtion that takes a file filter as an argument and sets it as the filter for Windows save dialog. To use and display the save dialog the win32gui.GetSaveFileNameW function is used. Arguments that are used with it include Initial Directory, Flags, File, Default Extention, Title, File Filter, and FilterIndex. As can be seen the inital directory is set to the users My Documents folder. Flags are set to allow multiple selection. The default extention type is txt. When it is called it must be done by assigning its return value to three variables; filename, customfilter, flags.
-
-The GetSaveFileNameW function must be used with exception handling as it will through an exception if the cancel button is clicked. So this example catches win32gui.error exceptions and prints the message "Cancel clicked" instead of crashing.
-
-If a file has been selected to save this example saves it with the string "Test Save Data".
-
-The GetOpenFileNameW function is used to select and open file on Windows. It is very simliar to the GetSaveFileNameW function covered above. Here is the on\_open\_clicked function that uses the Windows open dialog.
-
-```python
-def on_open_clicked(widget, file_filter=None):
-  filename=None
-  try:
-  filename, customfilter, flags=win32gui.GetOpenFileNameW(
-    InitialDir=os.path.join(os.environ['USERPROFILE'],"My Documents"),
-    Flags=win32con.OFN_ALLOWMULTISELECT|win32con.OFN_EXPLORER, File='',
-    DefExt='txt', Title='Select a File', Filter=file_filter, FilterIndex=0)
-  except win32gui.error:
-    print "Cancel clicked"
-  print 'open file names:', filename
-  return filename
-```
-
-The GetOpenFileNameW functions takes as arguments Intial Directory, Flags, File, Default Extention, Title, File Filter, and Filter Index. As can be seen the inital directory is set to the users My Documents folder. Flags are set to allow multiple selection. The default extention type is txt. When calling this function the return value must be assigned to three variables; these being the filename, customfilter, and flags.
-
-Like the save GetSaveFileNameW the GetOpenFileNameW function requires that it used with exception handling as it will give win32gui.error if the cancel button is pressed. If everything goes as planed the function should continue to the end where it prints the message "open file names: filename".
-
-## Glade 3 {#sec-glade-3}
-
-Glade is a program that allows the creation of the user interface graphical. Windows and dialogs can be created. Widgets can be dragged and dropped into place. Names assigned to widgets, callback functions assigned. All this is saved to a xml file with an extension of .glade.
-
-Docked on the left side of glade is the palette. The palette contains the top level elements such as:
-
-- windows (gtk.Window)
-- dialogs (gtk.Dialog etc...)
-
-Under the Toplevels is are the Containers. The containers contain:
-
-- Horizontal Box (gtk.HBox)
-- Vertical box (gtk.VBox)
-- Table (gtk.Table)
-- Notebook (gtk.Notebook)
-- Frame (gtk.Frame)
-- etc...
-
-After and under the Containers are the Control and Display widgets, they contain:
-
-- Button (gtk.Button)
-- Toggle Button (gtk.ToggleButton)
-- Check Button (gtk.CheckButton)
-- Spin Button (gtk.SpinButton)
-- Raido Button (gtk.RadioButton)
-- etc...
-
-To create a simple application, from the Toplevels select and add a Window. Next select a Horizontal Box and add it to the Window. When prompted for how many items, select two. When this is done the window will be split in half horizontally with a line going down through the center (see figure [Basic Glade User Interface Designer](02-more-gtk4.html#fig-basic-glade-user-interface)). Each of these can hold a widget.
-
-![Basic Glade User Interface Designer](images/more-pygtk/Screenshot-glade-example.png){: #fig-basic-glade-user-interface width="30%"}
-
-Next add two buttons from the container. The one on the left label Message and the one on the right label About. Also change the names to message and about. To do this click the first button. On the right hand side the editor should change for a button type (see figure [Glade Editor with Button](02-more-gtk4.html#fig-glade-editor-with-button)). As can be seen in figure[Glade Editor with Button](02-more-gtk4.html#fig-glade-editor-with-button); the class is of type GtkButton, the name is set to message meaning that when it is called with PyGTK it uses the name message. For the Label it is set to Message. The label is what is displayed to the user as the button text.
-
-![Glade Editor with Button](images/more-pygtk/Screenshot-glade-example-button-editor.png){: #fig-glade-editor-with-button width="50%"}
-
-Once the buttons have been added and setup with the names and labels then the signals that are to be caught should be added (see figure [Signal Handler Specified](02-more-gtk4.html#fig-glade-signal-handler-specified)). To add signal methods to the buttons first select the message button. Then in the editor window select the Signals tab. Under GtkButton there will be a signal called *clicked*. For clicked add a handler. If the handler space is clicked it will provide a default list to choose from. To see what it should look like look at figure [Signal Handler Specified](02-more-gtk4.html#fig-glade-signal-handler-specified). What is typed as the Handler is the function or method in the python code that will be called.
-
-![Signal Handler Specified](images/more-pygtk/Screenshot-glade-example-signal-handler.png){: #fig-glade-signal-handler-specified width="50%"}
-
-Now that the buttons have been added to the main window (whose name is window1) it is time to make sure that this window is visible. Select the main window and in the editor select the Common tab. Once in the Common tab find the *Visible* option and make sure it is set to *Yes* (see figure [Main Windows Set as Visible](02-more-gtk4.html#fig-glade-main-windows-set-as-visible)).
-
-![Main Windows Set as Visible](images/more-pygtk/Screenshot-glade-example-main-window-visible.png){: #fig-glade-main-windows-set-as-visible width="50%"}
-
-Now the main window is done. Save your work. Next an about dialog will be added. To add an about dialog it is selected from the Toplevel elements on the palette. Leave it with the default name *aboutdialog1*. The about dialog will be used to show how to interact with more than one window in glade.
-
-A PyGTK program interacts with the created glade file using gtk.glade.
-
-```python
-import pygtk
-pygtk.require('2.0')
-import gtk
-import gtk.glade
-
-class GladeExample(object):
-  def __init__(self):
-    self.gladefile = gtk.glade.XML("glade-example.glade")
-    self.gladefile.signal_autoconnect(self)
-    self.main_window = self.gladefile.get_widget("window1")
-    self.about_dialog = self.gladefile.get_widget("aboutdialog1")
-    self.message_dialog = self.gladefile.get_widget("messagedialog1")
-```
-
-Here the class GladeExample is declared with an intiation method that connects to the glade file that was created. The glade file is loaded using the gtk.glade.XML class. It takes as arguments the glade file and optionally a widget and translation domain.
-
-Then to use a widget as if it was created using PyGTK code it must be retrieved using the get\_widget method. The get\_widget method works by taking as an argument the name of the widget. In the glade example above the main windows name is window1, the about dialogs name is aboutdialog1, and the message dialog is messagedialog1. As can be seen the main window is assigned to self.main\_window and so on with the about and message dialog.
-
-What can be noticed that the buttons that were adding to the glade file to launch the about and message dialog were not assigned with the get\_widget method. This is because they were set to automatically call handler functions and do not need to write code for each button to connect them. This is handled with one line of code, self.gladefile.signal\_autoconnect(self). This one line will automatically connect any signal handlers that were specified in the glade file without having to write any extra code.
-
-```python
-  def on_about_clicked(self, widget):
-    self.about_dialog.run()
-    self.about_dialog.destroy()
-```
-
-As was specified with glade, when the about button is clicked, the method on\_about\_clicked is called. This method displays the about dialog that was created with glade and destroys the dialog when it is closed.
-
-```python
-  def on_message_clicked(self, widget):
-    self.message_dialog.run()
-    self.message_dialog.destroy()
-```
-
-As was specified with glade, when the message button is clicked, the method on\_message\_clicked is called. This method displays the message dialog that was created with glade and destroys the dialog when it is closed.
-
-```python
-  def on_window1_delete_event(self, widget, event):
-    gtk.main_quit()
-```
-
-the on\_window1\_delete\_event will quite the PyGTK application when the main window(window1) is closed. This to is specified with glade under the main windows Signal tab; GtkWidget --> delete-event.
-
-```python
-if __name__ == "__main__":
-  app = GladeExample()
-  gtk.main()
-```
-
-And of course a few lines that runs the glade example.
-
-## Builder {#sec-gtk-builder-convert}
-
-Builder refers to gtk.Builder which is the future as it is a replacement for gtk.glade. Basically what it is is including support for xml files to build applications inside of GTK itself, unlike glade which is a library. Currently the glade program does not support saving to the Builder format, but it will soon. In the mean time glade files must be converted to Builder files using *gtk-builder-convert*[^5]. This program will take a glade xml file and convert it to a Builder xml file.
-
-To convert a glade file to a Builder file the following command is issued:
-
-```python
-gtk-builder-convert glade-example.glade glade-example.xml
-```
-
-Now instead of using gtk.glade.XML to access this new builder xml file, gtk.Builder is used as shown here.
-
-```python
-builder = gtk.Builder()
-builder.add_from_file("glade-example.xml")
-```
-
-Also instead of using get\_widget like in the glade example (see [Glade 3](02-more-gtk4.html#sec-glade-3)), the method `get_object` is used.
-
-```python
-main_window = builder.get_object("window1")
-about_dialog = builder.get_object("aboutdialog1")
-message_dialog = builder.get_object("messagedialog1")
-```
-
-With this done, the widgets can be used as if they were programmed normally with PyGTK.
-
-To auto connect the signals like is avialbe using glade the following code is used.
-
-```python
-builder.connect_signals(self)
-```
-
-Remember this needs to be done from within a class.
-
-## Loading Images
-
-To load an image with PyGTK an instance of the gtk.Image class must be created. With this becomes available several methods for loading different types of images. This example will cover loading images from file and from the GTK stock images.
-
-Loading Images
-
-```python
-import pygtk, gtk
-def main():
-  win = gtk.Window()
-  win.connect("delete_event", lambda w,e: gtk.main_quit())
-  vbox = gtk.VBox(False, 0)
-
-  image1 = gtk.Image()
-  image1.set_from_stock(gtk.STOCK_DIALOG_INFO, gtk.ICON_SIZE_DND)
-
-  image2 = gtk.Image()
-  image2.set_from_file("flower.jpg")
-
-  vbox.pack_start(image1, False, False, 5)
-  vbox.pack_start(image2, False, False, 5)
-  win.add(vbox)
-  win.show_all()
-
-if __name__ == "__main__":
-  main()
-  gtk.main()
-```
-
-This example creates a window with a gtk.VBox and adds two images. The first image is set from stock gtk images created with the set\_from stock method. The set\_from\_stock method requires a GTK stock image and a stock size. The stock types available can be found in the appendix ([Stock Icons](94-icon-names.html#sec-appendix-stock-icons)). The stock sizes include:
-
-- gtk.ICON\_SIZE\_MENU
-- gtk.ICON\_SIZE\_SMALL\_TOOLBAR
-- gtk.ICON\_SIZE\_LARGE\_TOOLBAR
-- gtk.ICON\_SIZE\_BUTTON
-- gtk.ICON\_SIZE\_DND
-- gtk.ICON\_SIZE\_DIALOG
-
-The second image is loaded using set\_from\_file method. All this method requires is location on the computer to the image.
-
-All that needs to be done once the images are loaded is add them to a widget. In this example they are added to gtk.VBox.
-
-There are many different methods for loading images and they can be found at the PyGTK reference site[^6].
-
-## Tooltips
-
-A tooltip is used to display useful information to the screen a user puts a mouse over a widget such as label or button. To use a simple tooltip requires only on method call on the widget: set\_tooltip\_text
-
-```python
-label = gtk.Label("Display Tooltip")
-label.set_tooltip_text("This is a Tooltip")
-```
-
-When a mouse is placed over this label a tooltip will display the text "This is a Tooltip". Very simple to use and there is nothing more to be said on that.
-
-For more fancy tooltips a custom tooltip must be created. To do this the has\_tooltip property must be set to True. Then the widget that is to display the custom tooltip must connect to the query-tooltip signal. For example, the callback function can create a new tooltip by creating an gtk.HBox that holds an image and text then use set\_custom on the tooltip to use this hbox.
-
-Here is an example.
-
-```python
-fancy_label = gtk.Label("A fancy Tooltip")
-fancy_label.props.has_tooltip = True
-fancy_label.connect("query-tooltip", on_query_tooltip)
-```
-
-So this creates a label, sets the tooltip to true using fancy\_label.props.has\_tooltip property, and then connects the query-tooltip signal to the function on\_query\_tooltip.
-
-Here is an example of the on\_query\_tooltip function. This function creates a label and an image that is displayed instead of plain text.
-
-```python
-def on_query_tooltip(widget, x, y, keyboard_tip, tooltip):
-  hbox = gtk.HBox()
-  label = gtk.Label('Fancy Tooltip with an Image')
-
-  image = gtk.Image()
-  image.set_from_stock(gtk.STOCK_DIALOG_INFO, gtk.ICON_SIZE_DND)
-
-  hbox.pack_start(image, False, False, 0)
-  hbox.pack_start(label, False, False, 0)
-  hbox.show_all()
-
-  tooltip.set_custom(hbox)
-  return True
-```
-
-As can be seen this creates a gtk.HBox to hold a label and an Image. It then uses the tooltip argument to set it to a custom tooltip. A custom tooltip can be anything but this example has kept it simple for understandability sake. For more tooltip options visit the PyGTK tooltip reference page[^7].
+The buttons name actions, exactly as menu items do — which means the notification
+can be acted on after your program has exited, and the desktop will start it again
+to deliver the action.
+
+The string id is a handle: sending again with the same id **replaces** the earlier
+notification rather than stacking a second one, and
+`app.withdraw_notification("export-done")` takes it back.
+
+One catch that costs people an afternoon: the notification only appears if there is
+an installed `.desktop` file whose basename matches the application id
+(`com.example.Notification.desktop` for `com.example.Notification`). Without it the
+call succeeds silently and nothing is shown. Desktop files are in
+[Desktop Integration](05-desktop-integration.html).
+
+The full example is `examples/gtk4/notification.py`.
 
 ## Summary
 
-This section is not yet written :)
+- List widgets are four parts: a model of GObjects, a factory, a selection model,
+  and a view. `setup` builds a row, `bind` fills it, `unbind` undoes what `bind` did.
+- Sorting and filtering are models wrapped around the store, driven by
+  `Gtk.Expression`, so they run in C rather than in Python.
+- File dialogs are asynchronous and hand you a `Gio.File`. Use it rather than
+  `get_path()`, and the portal works for free.
+- Drag and drop is a `Gtk.DragSource` and a `Gtk.DropTarget` added as controllers,
+  moving `GValue`s.
+- `Gtk.Image` is for icons, `Gtk.Picture` is for content.
+- Layouts can live in `.ui` files; `Gtk.Template` binds one to a class. Glade is
+  not part of this any more.
+- Status icons are gone; `Gio.Notification` covers what they were used for.
 
-[^1]: Take a look at: <http://pygtk.org/pygtk2tutorial/sec-DNDMethods.html>
-[^2]: Oh do I ever know it. Talk about wasted hours of my life I am never getting back.
-[^3]: For a full listing of GTK stock icons take a look at the list of stock icons on page [Stock Icons](94-icon-names.html#sec-appendix-stock-icons) or the pygtk website at: <http://www.pygtk.org/docs/pygtk/gtk-stock-items.html>
-[^4]: See sectionPyGTK and Windows for instructions on using PyGTK on Windows for more information. Or just go to <http://sourceforge.net/projects/pywin32/files/> and download and install it.
-[^5]: For more information on gtk-builder-convert visit: <http://library.gnome.org/devel/gtk/2.12/gtk-builder-convert.html>. Also if you plan on using gtk-builder-convert, gtk development files must be installed to have it installed. This is accomplished on Ubuntu by installing libgtk2.0-dev.
-[^6]: The PyGTK image class can be found at: <http://www.pygtk.org/docs/pygtk/class-gtkimage.html>
-[^7]: The PyGTK tooltip reference page can be found at: <http://www.pygtk.org/docs/pygtk/class-gtktooltip.html>
+[Drawing with Cairo](03-drawing-with-cairo.html) is next: what to do when no
+existing widget draws what you need.

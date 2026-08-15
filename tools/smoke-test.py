@@ -140,11 +140,14 @@ def main(argv: list[str]) -> int:
             [sys.executable, __file__, "--one", str(path)],
             capture_output=True, text=True, timeout=120,
         )
-        if result.returncode == 0:
+        # An exception raised inside a GTK signal handler is printed and swallowed:
+        # the process still exits 0. Treat any traceback on stderr as a failure.
+        crashed = "Traceback (most recent call last)" in result.stderr
+        if result.returncode == 0 and not crashed:
             print(f"PASS  {path}")
         else:
             failures.append(path)
-            print(f"FAIL  {path}")
+            print(f"FAIL  {path}" + ("  (exception in a callback)" if crashed else ""))
             for line in (result.stderr or result.stdout).strip().splitlines()[-12:]:
                 print(f"      {line}")
 

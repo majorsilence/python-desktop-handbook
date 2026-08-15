@@ -251,7 +251,7 @@ Finally the .po files must be edited and the localized language put into their p
 
 ## gtk.Builder Translation {#sec-gtk-builder-translation}
 
-Translating a project that makes use of a gtk.Builder file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)). First this file must be translated to a gtk.Builder file using the gtk-builder-convert (See section [Builder](02-more-gtk4.html#sec-gtk-builder-convert)) script.
+Translating a project that makes use of a gtk.Builder file is easy. It just takes a few extra commands to extract the needed text strings. To start off here is an example program that makes use of the translation-example.glade file (See Figure [Glade Translation Project](10-internationalization.html#fig-translations-glade-translation-project)). First this file must be translated to a gtk.Builder file using the gtk-builder-convert (See section [Builder](02-more-gtk4.html#ui-files)) script.
 
 ```python
 import pygtk
