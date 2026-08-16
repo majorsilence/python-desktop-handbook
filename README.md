@@ -1,4 +1,4 @@
-# Python Desktop Notebook
+# Python Desktop Handbook
 
 *Building Desktop Applications with GTK 4 and Qt 6* — an open source book about
 writing desktop applications in Python, and the technologies around them:
