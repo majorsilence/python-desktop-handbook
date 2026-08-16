@@ -107,7 +107,6 @@ jobs:
           bundler-cache: true
 
       - uses: actions/configure-pages@v5
-        id: pages
 
       - name: Collect the PDF built above
         uses: actions/download-artifact@v4
@@ -115,13 +114,25 @@ jobs:
           name: python-desktop-notebook-pdf
           path: .
 
+      # The baseurl is empty because the site is served from the root of
+      # python-desktop-handbook.majorsilence.com. It is set here rather than
+      # taken from configure-pages' base_path, which reports the project-page
+      # path (/python-desktop-handbook) whenever the custom domain is not in
+      # effect and would silently prefix every link and asset with it.
       - name: Build with Jekyll
         env:
           JEKYLL_ENV: production
+        run: bundle exec jekyll build --baseurl "" --destination _site
+
+      # A deploy once went out with every link and the stylesheet prefixed with
+      # the project path, which 404s on the custom domain. Cheap to check.
+      - name: Check no link carries the project path
         run: |
-          bundle exec jekyll build \
-            --baseurl "${{ steps.pages.outputs.base_path }}" \
-            --destination _site
+          if grep -rq '"/python-desktop-handbook/' _site; then
+            grep -rn '"/python-desktop-handbook/' _site | head -5
+            echo "::error::built site has project-path links; the baseurl is wrong"
+            exit 1
+          fi
 
       - name: Publish the PDF alongside the site
         run: cp python-desktop-notebook.pdf _site/python-desktop-notebook.pdf

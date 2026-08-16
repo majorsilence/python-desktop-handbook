@@ -5,8 +5,8 @@ writing desktop applications in Python, and the technologies around them:
 drawing, printing, multimedia, D-Bus, embedded web content, translation and
 packaging.
 
-Read it online at <https://majorsilence.github.io/pygtknotebook/>, or download
-[the PDF](https://majorsilence.github.io/pygtknotebook/python-desktop-notebook.pdf).
+Read it online at <https://python-desktop-handbook.majorsilence.com/>, or download
+[the PDF](https://python-desktop-handbook.majorsilence.com/python-desktop-notebook.pdf).
 
 It began as *PyGTK Notebook*, one person's notes on PyGTK and GTK 2. That
 edition is in the git history; this one is rewritten from it.
@@ -114,6 +114,11 @@ whole thing under a different language.
 packaging example with Meson, builds the PDF, builds the site, copies the PDF
 into it, and deploys the result to GitHub Pages on every push to `main`. Enable
 it under *Settings → Pages → Build and deployment → GitHub Actions*.
+
+The site is served from `python-desktop-handbook.majorsilence.com`. For a
+workflow deployment the domain is the one recorded in *Settings → Pages →
+Custom domain*; the `CNAME` file keeps it if the repository ever goes back to
+publishing from a branch.
 
 ## Contributing
 

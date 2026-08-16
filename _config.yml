@@ -20,8 +20,10 @@ parts:
       PySide6 is Qt's own Python binding. This part covers the same ground again,
       so you can pick a toolkit knowing what each one asks of you.
 
-# Set by the Pages workflow; harmless locally.
-url: ""
+# The site is served from a custom domain, so it lives at the root of the host
+# and baseurl is empty. The Pages workflow passes --baseurl anyway, which is
+# what would put the site back under a subdirectory if the domain ever went.
+url: "https://python-desktop-handbook.majorsilence.com"
 baseurl: ""
 
 collections:
