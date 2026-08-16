@@ -95,22 +95,58 @@ def patch_main_loop() -> bool:
 
 
 def patch_qt() -> bool:
-    """Make QApplication.exec() quit shortly after it starts."""
+    """Make a Qt application's exec() quit shortly after it starts.
+
+    Every class in the QCoreApplication hierarchy defines its *own* exec in its
+    __dict__ rather than inheriting one, so patching the base class alone has no
+    effect on QApplication.exec and the example runs forever. Each one has to be
+    replaced individually.
+    """
     try:
         from PySide6.QtCore import QCoreApplication, QTimer
     except ImportError:
         return False
 
-    original = QCoreApplication.exec
+    classes = [QCoreApplication]
+    for module, name in (("PySide6.QtGui", "QGuiApplication"),
+                         ("PySide6.QtWidgets", "QApplication")):
+        try:
+            classes.append(getattr(__import__(module, fromlist=[name]), name))
+        except (ImportError, AttributeError):
+            pass                    # that half of Qt is not installed
 
-    def exec_(self=None):
-        app = self if self is not None else QCoreApplication.instance()
-        QTimer.singleShot(LINGER_MS, app.quit)
-        return original(app)
+    def arm():
+        app = QCoreApplication.instance()
+        if app is not None:
+            QTimer.singleShot(LINGER_MS, app.quit)
 
-    QCoreApplication.exec = exec_
-    QCoreApplication.exec_ = exec_
-    return True
+    # PySide6 declares exec() static and exec_() an instance method, so the two
+    # need different wrappers -- calling the static one with an instance raises
+    # "QApplication.exec() takes no arguments (1 given)".
+    def wrap_static(original):
+        def exec_static(*args, **kwargs):
+            arm()
+            return original(*args, **kwargs)
+        return staticmethod(exec_static)
+
+    def wrap_method(original):
+        def exec_method(self, *args, **kwargs):
+            arm()
+            return original(self, *args, **kwargs)
+        return exec_method
+
+    patched = False
+    for cls in classes:
+        for name in ("exec", "exec_"):
+            raw = cls.__dict__.get(name)
+            if raw is None:
+                continue
+            if isinstance(raw, staticmethod):
+                setattr(cls, name, wrap_static(raw.__func__))
+            else:
+                setattr(cls, name, wrap_method(raw))
+            patched = True
+    return patched
 
 
 def run_one(path: pathlib.Path) -> tuple[bool, str]:
