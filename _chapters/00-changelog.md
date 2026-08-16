@@ -68,6 +68,10 @@ Dropped, because the technology was retired rather than replaced: the IronPython
 and Gtk# chapter, the PyGTK-on-Windows appendix, and the unfinished Telepathy,
 Geoclue and custom-widget chapters.
 
+Both licences changed as well. The text moved from
+[CC BY-SA 3.0 to 4.0](90-book-text-licenses.html), and the sample code from the
+LGPL v3 to [MIT](91-source-code-license.html).
+
 ## Earlier editions
 
 Versions 0.03 to 0.13, from December 2008 to October 2012, covered PyGTK and GTK 2:

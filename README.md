@@ -123,5 +123,8 @@ pull request.
 ## License
 
 Book text is licensed under
-[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode).
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode.en).
 Sample code is released under the MIT license.
+
+Editions up to 0.13 released their text under CC BY-SA 3.0 and their sample code
+under the LGPL v3; copies distributed under those terms keep them.
