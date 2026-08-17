@@ -10,18 +10,18 @@ import sys
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import GObject, Gtk
 
 
-def on_toggled(button):
+def on_toggled(button: Gtk.Button) -> None:
     print(f"{button.get_label()} is now {button.get_active()}")
 
 
-def on_switch_active(switch, _pspec):
+def on_switch_active(switch: Gtk.Switch, _pspec: GObject.ParamSpec) -> None:
     print(f"switch is now {switch.get_active()}")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Toggles")
     window.set_default_size(320, 300)
 

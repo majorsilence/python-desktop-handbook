@@ -22,7 +22,7 @@ class Download(GObject.Object):
     # With no flags it is RUN_FIRST, so it runs BEFORE anything connected with
     # connect(). Pass RUN_LAST if the default should be a fallback instead.
     @GObject.Signal(arg_types=(str,))
-    def started(self, url):
+    def started(self, url: str) -> None:
         print(f"  [default handler, runs first] started {url}")
 
     # A signal with no arguments and no default handler.
@@ -35,10 +35,10 @@ class Download(GObject.Object):
     @GObject.Signal(return_type=bool, arg_types=(str,),
                     flags=GObject.SignalFlags.RUN_LAST,
                     accumulator=GObject.signal_accumulator_true_handled)
-    def confirm_overwrite(self, filename):
+    def confirm_overwrite(self, filename: str) -> bool:
         return False        # nobody objected
 
-    def run(self, url, filename):
+    def run(self, url: str, filename: str) -> None:
         self.emit("started", url)
 
         if self.emit("confirm_overwrite", filename):
@@ -49,14 +49,14 @@ class Download(GObject.Object):
         self.emit("finished")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Signals")
     window.set_default_size(420, 260)
 
     log = Gtk.Label(xalign=0, wrap=True)
     lines = []
 
-    def note(text):
+    def note(text: str) -> None:
         lines.append(text)
         log.set_text("\n".join(lines[-8:]))
 

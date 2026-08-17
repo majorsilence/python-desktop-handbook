@@ -15,8 +15,9 @@ from gi.repository import Gio, GLib
 RUN_FOR_SECONDS = 3
 
 
-def on_name_owner_changed(_connection, _sender, _path, _interface, _signal,
-                          parameters):
+def on_name_owner_changed(_connection: Gio.DBusConnection, _sender: str,
+                          _path: str, _interface: str, _signal: str,
+                          parameters: GLib.Variant) -> None:
     name, old_owner, new_owner = parameters.unpack()
     if name.startswith(":"):
         return                              # unique names, too noisy to report
@@ -28,11 +29,11 @@ def on_name_owner_changed(_connection, _sender, _path, _interface, _signal,
         print(f"changed:    {name}")
 
 
-def on_appeared(_connection, name, owner):
+def on_appeared(_connection: Gio.DBusConnection, name: str, owner: str) -> None:
     print(f"watch: {name} is owned by {owner}")
 
 
-def on_vanished(_connection, name):
+def on_vanished(_connection: Gio.DBusConnection, name: str) -> None:
     print(f"watch: {name} is gone")
 
 

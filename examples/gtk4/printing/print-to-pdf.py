@@ -27,7 +27,8 @@ BODY = (
 )
 
 
-def on_draw_page(_operation, context, page_number):
+def on_draw_page(_operation: Gtk.PrintOperation, context: Gtk.PrintContext,
+                 page_number: int) -> None:
     """Draw one page. Called once per page, in order."""
     cr = context.get_cairo_context()
     width = context.get_width()

@@ -18,7 +18,7 @@ from gi.repository import Gio, GLib
 BUS = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
 
-def list_names():
+def list_names() -> list[str]:
     """Every name on the bus. The ones starting with ':' are unique connection
     names; the rest are well-known names somebody has claimed."""
     reply = BUS.call_sync(
@@ -32,7 +32,7 @@ def list_names():
     return sorted(name for name in names if not name.startswith(":"))
 
 
-def introspect(name, path):
+def introspect(name: str, path: str) -> str:
     """Ask an object to describe itself. This is what the tools display."""
     try:
         reply = BUS.call_sync(
@@ -59,7 +59,7 @@ def introspect(name, path):
     return "\n".join(lines)
 
 
-def main():
+def main() -> int:
     names = list_names()
     print(f"{len(names)} well-known names on the session bus:")
     for name in names:

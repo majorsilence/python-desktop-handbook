@@ -9,12 +9,13 @@ user's session, are synced by some setups, and end up in backups in the clear.
 """
 
 import sys
+from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Secret", "1")
-from gi.repository import GLib, Gtk, Secret
+from gi.repository import Gio, GLib, GObject, Gtk, Secret
 
 # A schema names the attributes a secret is looked up by. It is not a security
 # boundary -- it is how you find the item again.
@@ -28,12 +29,12 @@ SCHEMA = Secret.Schema.new(
 )
 
 
-def attributes(username):
+def attributes(username: str) -> dict[str, str]:
     return {"service": "com.example.Passwords", "username": username}
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Passwords")
         self.set_default_size(380, 220)
@@ -64,7 +65,7 @@ class Window(Gtk.ApplicationWindow):
 
     # Every call has a synchronous and an asynchronous form. The keyring may be
     # locked, in which case the desktop prompts the user -- so use the async one.
-    def on_store(self, _button):
+    def on_store(self, _button: Gtk.Button) -> None:
         Secret.password_store(
             SCHEMA,
             attributes(self.username.get_text()),
@@ -75,19 +76,19 @@ class Window(Gtk.ApplicationWindow):
             self.on_stored,
         )
 
-    def on_stored(self, _source, result):
+    def on_stored(self, _source: GObject.Object, result: Gio.AsyncResult) -> None:
         try:
             Secret.password_store_finish(result)
             self.status.set_text("Stored in the keyring.")
         except GLib.Error as error:
             self.status.set_text(f"Could not store it: {error.message}")
 
-    def on_lookup(self, _button):
+    def on_lookup(self, _button: Gtk.Button) -> None:
         Secret.password_lookup(
             SCHEMA, attributes(self.username.get_text()), None, self.on_looked_up
         )
 
-    def on_looked_up(self, _source, result):
+    def on_looked_up(self, _source: GObject.Object, result: Gio.AsyncResult) -> None:
         try:
             password = Secret.password_lookup_finish(result)
         except GLib.Error as error:
@@ -99,12 +100,12 @@ class Window(Gtk.ApplicationWindow):
             self.password.set_text(password)
             self.status.set_text(f"Found a password of {len(password)} characters.")
 
-    def on_clear(self, _button):
+    def on_clear(self, _button: Gtk.Button) -> None:
         Secret.password_clear(
             SCHEMA, attributes(self.username.get_text()), None, self.on_cleared
         )
 
-    def on_cleared(self, _source, result):
+    def on_cleared(self, _source: GObject.Object, result: Gio.AsyncResult) -> None:
         try:
             removed = Secret.password_clear_finish(result)
         except GLib.Error as error:
@@ -113,7 +114,7 @@ class Window(Gtk.ApplicationWindow):
         self.status.set_text("Removed." if removed else "There was nothing to remove.")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     Window(application=app).present()
 
 

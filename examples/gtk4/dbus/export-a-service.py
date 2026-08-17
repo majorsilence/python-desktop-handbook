@@ -47,7 +47,7 @@ INTERFACE_XML = """
 
 
 class Counter:
-    def __init__(self, connection):
+    def __init__(self, connection: Gio.DBusConnection) -> None:
         self.connection = connection
         self.value = 0
         self.label = "counter"
@@ -58,8 +58,10 @@ class Counter:
     # GVariant tuple; the reply has to be a GVariant tuple too, or None for a
     # method that returns nothing.
 
-    def on_method_call(self, _connection, _sender, _path, _interface,
-                       method, parameters, invocation):
+    def on_method_call(self, _connection: Gio.DBusConnection, _sender: str,
+                       _path: str, _interface: str, method: str,
+                       parameters: GLib.Variant,
+                       invocation: Gio.DBusMethodInvocation) -> None:
         if method == "Increment":
             (by,) = parameters.unpack()
             self.value += by
@@ -86,14 +88,18 @@ class Counter:
 
     # -- properties -------------------------------------------------------------
 
-    def on_get_property(self, _connection, _sender, _path, _interface, prop):
+    def on_get_property(self, _connection: Gio.DBusConnection, _sender: str,
+                        _path: str, _interface: str,
+                        prop: str) -> GLib.Variant | None:
         if prop == "Value":
             return GLib.Variant("i", self.value)
         if prop == "Label":
             return GLib.Variant("s", self.label)
         return None
 
-    def on_set_property(self, _connection, _sender, path, interface, prop, value):
+    def on_set_property(self, _connection: Gio.DBusConnection, _sender: str,
+                        path: str, interface: str, prop: str,
+                        value: GLib.Variant) -> bool:
         if prop != "Label":
             return False
         self.label = value.get_string()
@@ -107,7 +113,7 @@ class Counter:
         )
         return True
 
-    def emit_changed(self):
+    def emit_changed(self) -> None:
         self.connection.emit_signal(
             None, PATH, NAME, "Changed", GLib.Variant("(i)", (self.value,))
         )
@@ -121,7 +127,7 @@ class Counter:
         )
 
 
-def on_startup(app):
+def on_startup(app: Gio.Application) -> None:
     connection = app.get_dbus_connection()
     if connection is None:
         raise SystemExit("no session bus; run this under dbus-run-session")

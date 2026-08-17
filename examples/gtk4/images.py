@@ -18,7 +18,7 @@ HERE = pathlib.Path(__file__).parent
 SAMPLE = HERE / "sample.jpg"
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Images")
     window.set_default_size(480, 400)
 

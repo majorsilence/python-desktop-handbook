@@ -17,6 +17,7 @@ import locale
 import os
 import pathlib
 import sys
+from typing import Any
 
 import gi
 
@@ -32,7 +33,7 @@ HERE = pathlib.Path(__file__).parent
 LOCALE_DIR = HERE / "locale" if (HERE / "locale").exists() else pathlib.Path("/usr/share/locale")
 
 
-def set_up_translation():
+def set_up_translation() -> None:
     # setlocale() reads LC_ALL / LC_MESSAGES / LANG from the environment. Without
     # it the C library stays in the "C" locale and nothing is translated, however
     # correct the rest of your setup is.
@@ -65,7 +66,7 @@ _ = gettext.gettext
 ngettext = gettext.ngettext
 
 
-def pgettext(context, message):
+def pgettext(context: str, message: str) -> str:
     """Disambiguate a word by context. "Open" the verb is not "Open" the state."""
     lookup = f"{context}\x04{message}"
     translated = gettext.gettext(lookup)
@@ -73,7 +74,7 @@ def pgettext(context, message):
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         # Translators: this is the window title.
         self.set_title(_("Greeter"))
@@ -105,7 +106,7 @@ class Window(Gtk.ApplicationWindow):
 
         self.set_child(box)
 
-    def on_greet(self, _button):
+    def on_greet(self, _button: Gtk.Button) -> None:
         name = self.name.get_text().strip() or _("stranger")
         # Use named or positional formatting, never concatenation: word order
         # differs between languages and a translator has to be able to move the
@@ -114,7 +115,7 @@ class Window(Gtk.ApplicationWindow):
         self.count += 1
         self.update_tally()
 
-    def update_tally(self):
+    def update_tally(self) -> None:
         # ngettext picks the right plural form. Some languages have one form,
         # some have two, some have six; the .po file's Plural-Forms header says
         # which, and the code does not need to know.
@@ -125,7 +126,7 @@ class Window(Gtk.ApplicationWindow):
         )
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     Window(application=app).present()
 
 

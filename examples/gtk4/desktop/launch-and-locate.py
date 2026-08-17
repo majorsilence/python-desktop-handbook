@@ -14,10 +14,11 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
 
 
-def open_url(window, status):
+def open_url(window: Gtk.Window, status: Gtk.Label) -> None:
     launcher = Gtk.UriLauncher(uri="https://gtk.org/")
 
-    def done(launcher, result, _data=None):
+    def done(launcher: Gtk.UriLauncher, result: Gio.AsyncResult,
+             _data: object = None) -> None:
         try:
             launcher.launch_finish(result)
             status.set_text("Handed the URL to the desktop.")
@@ -27,12 +28,13 @@ def open_url(window, status):
     launcher.launch(window, None, done)
 
 
-def show_in_files(window, status):
+def show_in_files(window: Gtk.Window, status: Gtk.Label) -> None:
     """Open the user's Downloads folder in whatever file manager they use."""
     folder = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD)
     launcher = Gtk.FileLauncher(file=Gio.File.new_for_path(folder or GLib.get_home_dir()))
 
-    def done(launcher, result, _data=None):
+    def done(launcher: Gtk.FileLauncher, result: Gio.AsyncResult,
+             _data: object = None) -> None:
         try:
             launcher.launch_finish(result)
             status.set_text("Opened the folder.")
@@ -42,7 +44,7 @@ def show_in_files(window, status):
     launcher.launch(window, None, done)
 
 
-def describe_directories():
+def describe_directories() -> str:
     """Where a well-behaved program puts its files.
 
     Never build these by joining "~" with ".myapp": the XDG variables move them,
@@ -61,7 +63,7 @@ def describe_directories():
     )
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Launch and locate")
     window.set_default_size(560, 360)
 

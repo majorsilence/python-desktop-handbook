@@ -7,19 +7,20 @@ GTK 4 the namespace is WebKit 6.0 -- not WebKit2 4.x, which is the GTK 3 build.
 """
 
 import sys
+from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Adw, GLib, Gtk, WebKit
+from gi.repository import Adw, GLib, GObject, Gtk, WebKit
 
 HOME = "https://gnome.org/"
 
 
 class Browser(Adw.ApplicationWindow):
-    def __init__(self, uri, **kwargs):
+    def __init__(self, uri, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Browser")
         self.set_default_size(900, 640)
@@ -72,7 +73,7 @@ class Browser(Adw.ApplicationWindow):
 
         self.view.load_uri(uri)
 
-    def on_address_activated(self, entry):
+    def on_address_activated(self, entry: Gtk.Entry) -> None:
         text = entry.get_text().strip()
         if not text:
             return
@@ -81,27 +82,29 @@ class Browser(Adw.ApplicationWindow):
             text = "https://" + text
         self.view.load_uri(text)
 
-    def on_uri_changed(self, view, _pspec):
+    def on_uri_changed(self, view: Gtk.Widget, _pspec: GObject.ParamSpec) -> None:
         self.address.set_text(view.get_uri() or "")
 
-    def on_load_changed(self, view, event):
+    def on_load_changed(self, view: WebKit.WebView, event: WebKit.LoadEvent) -> None:
         self.back.set_sensitive(view.can_go_back())
         self.forward.set_sensitive(view.can_go_forward())
         if event == WebKit.LoadEvent.FINISHED:
             self.progress.set_visible(False)
 
-    def on_progress(self, view, _pspec):
+    def on_progress(self, view: Gtk.Widget, _pspec: GObject.ParamSpec) -> None:
         fraction = view.get_estimated_load_progress()
         self.progress.set_fraction(fraction)
         self.progress.set_visible(0 < fraction < 1)
 
-    def on_load_failed(self, _view, _event, uri, error):
+    def on_load_failed(self, _view: WebKit.WebView, _event: WebKit.LoadEvent,
+                       uri: str, error: GLib.Error) -> bool:
         # Returning True says "I have shown the user something"; returning False
         # lets WebKit display its own error page.
         self.address.set_text(f"{uri} — {error.message}")
         return False
 
-    def on_decide_policy(self, _view, decision, decision_type):
+    def on_decide_policy(self, _view: WebKit.WebView, decision: WebKit.PolicyDecision,
+                         decision_type: WebKit.PolicyDecisionType) -> bool:
         """Called before anything is navigated to, opened or downloaded."""
         if decision_type == WebKit.PolicyDecisionType.NAVIGATION_ACTION:
             action = decision.get_navigation_action()
@@ -113,7 +116,7 @@ class Browser(Adw.ApplicationWindow):
         return True
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     uri = sys.argv[1] if len(sys.argv) > 1 else HOME
     Browser(uri, application=app).present()
 

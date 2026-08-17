@@ -9,7 +9,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Entries")
     window.set_default_size(420, 320)
 
@@ -39,7 +39,7 @@ def on_activate(app):
     scroller.set_child(view)
     box.append(scroller)
 
-    def report(_button):
+    def report(_button: Gtk.Button) -> None:
         buffer = view.get_buffer()
         start, end = buffer.get_bounds()
         print("name:", entry.get_text())

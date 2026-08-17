@@ -15,6 +15,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+from typing import Any
 
 import gi
 
@@ -25,7 +26,7 @@ SCHEMA_ID = "com.example.Settings"
 HERE = pathlib.Path(__file__).parent
 
 
-def load_settings():
+def load_settings() -> Gio.Settings:
     """The installed path first; a locally compiled schema as a fallback."""
     source = Gio.SettingsSchemaSource.get_default()
     if source is not None and source.lookup(SCHEMA_ID, True) is not None:
@@ -47,7 +48,7 @@ def load_settings():
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, settings, **kwargs):
+    def __init__(self, settings, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.settings = settings
         self.set_title("Settings")
@@ -98,7 +99,7 @@ class Window(Gtk.ApplicationWindow):
         self.set_child(box)
         self.connect("close-request", self.on_close)
 
-    def update_preview(self):
+    def update_preview(self) -> None:
         if not self.settings.get_boolean("enabled"):
             self.preview.set_text("(disabled)")
             return
@@ -106,11 +107,11 @@ class Window(Gtk.ApplicationWindow):
         repeat = self.settings.get_int("repeat")
         self.preview.set_text(" ".join([greeting] * repeat))
 
-    def on_reset(self, _button):
+    def on_reset(self, _button: Gtk.Button) -> None:
         for key in ("greeting", "enabled", "repeat"):
             self.settings.reset(key)
 
-    def on_close(self, _window):
+    def on_close(self, _window: Gtk.Window) -> bool:
         # Store the size as the tuple the schema declared.
         self.settings.set_value(
             "window-size",
@@ -119,7 +120,7 @@ class Window(Gtk.ApplicationWindow):
         return False
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     Window(load_settings(), application=app).present()
 
 

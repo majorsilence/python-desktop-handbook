@@ -18,7 +18,7 @@ from sample_media import ensure_sample
 Gst.init(None)
 
 
-def describe(info):
+def describe(info: GstPbutils.DiscovererStreamInfo) -> str:
     caps = info.get_caps()
     # A human-readable codec name, rather than the raw caps string.
     name = GstPbutils.pb_utils_get_codec_description(caps) if caps else "unknown"
@@ -37,7 +37,7 @@ def describe(info):
     return f"other: {name}"
 
 
-def main():
+def main() -> int:
     path = sys.argv[1] if len(sys.argv) > 1 else str(ensure_sample())
     uri = Gst.filename_to_uri(path)
 

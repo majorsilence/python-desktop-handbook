@@ -12,12 +12,13 @@ wire an untrusted page to a handler that does anything privileged.
 """
 
 import sys
+from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
-from gi.repository import GLib, Gtk, WebKit
+from gi.repository import Gio, GLib, Gtk, WebKit
 
 PAGE = """
 <!doctype html>
@@ -54,7 +55,7 @@ PAGE = """
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("JavaScript bridge")
         self.set_default_size(720, 520)
@@ -98,7 +99,8 @@ class Window(Gtk.ApplicationWindow):
 
     # -- page -> Python ---------------------------------------------------------
 
-    def on_message(self, _manager, message):
+    def on_message(self, _manager: WebKit.UserContentManager,
+                   message: WebKit.JavascriptResult) -> None:
         # The payload is a JSCValue. to_string() for text, or to_json() for
         # anything structured.
         payload = message.to_string()
@@ -106,7 +108,7 @@ class Window(Gtk.ApplicationWindow):
 
     # -- Python -> page ---------------------------------------------------------
 
-    def on_ask(self, _button):
+    def on_ask(self, _button: Gtk.Button) -> None:
         self.view.evaluate_javascript(
             "setTitle('set from Python at ' + new Date().toLocaleTimeString())",
             -1,                 # length; -1 means "it is nul-terminated"
@@ -114,7 +116,8 @@ class Window(Gtk.ApplicationWindow):
             self.on_evaluated,
         )
 
-    def on_evaluated(self, view, result, _data=None):
+    def on_evaluated(self, view: WebKit.WebView, result: Gio.AsyncResult,
+                     _data: object = None) -> None:
         try:
             value = view.evaluate_javascript_finish(result)
         except GLib.Error as error:
@@ -127,7 +130,7 @@ class Window(Gtk.ApplicationWindow):
             self.status.set_text(f"the page returned: {value.to_json(0)}")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     Window(application=app).present()
 
 

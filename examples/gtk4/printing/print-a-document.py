@@ -7,6 +7,7 @@ printer and a page setup, and it is where you work out how long the document is.
 """
 
 import sys
+from typing import Any
 
 import gi
 
@@ -16,7 +17,7 @@ gi.require_version("PangoCairo", "1.0")
 # get_cairo_context() needs PyGObject's cairo support (python3-gi-cairo on
 # Debian). Without it the failure happens inside the draw handler, not here.
 gi.require_foreign("cairo")
-from gi.repository import Gtk, Pango, PangoCairo
+from gi.repository import Gio, Gtk, Pango, PangoCairo
 
 TEXT = (
     """A print job in GTK runs in three acts.
@@ -48,11 +49,12 @@ HEADER_FONT = Pango.FontDescription("Sans Bold 10")
 
 
 class Document:
-    def __init__(self):
+    def __init__(self) -> None:
         self.lines_per_page = 0
         self.line_height = 0
 
-    def on_begin_print(self, operation, context):
+    def on_begin_print(self, operation: Gtk.PrintOperation,
+                       context: Gtk.PrintContext) -> None:
         """Work out how many pages there are, now that the paper size is known."""
         layout = context.create_pango_layout()
         layout.set_font_description(FONT)
@@ -65,7 +67,8 @@ class Document:
         pages = -(-len(TEXT) // self.lines_per_page)           # ceiling division
         operation.set_n_pages(pages)
 
-    def on_draw_page(self, operation, context, page_number):
+    def on_draw_page(self, operation: Gtk.PrintOperation, context: Gtk.PrintContext,
+                     page_number: int) -> None:
         cr = context.get_cairo_context()
         width = context.get_width()
         height = context.get_height()
@@ -99,12 +102,13 @@ class Document:
         cr.move_to(0, height - self.line_height)
         PangoCairo.show_layout(cr, footer)
 
-    def on_end_print(self, _operation, _context):
+    def on_end_print(self, _operation: Gtk.PrintOperation,
+                     _context: Gtk.PrintContext) -> None:
         self.lines_per_page = 0
 
 
 class PrintWindow(Gtk.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Printing")
         self.set_default_size(380, 220)
@@ -134,7 +138,7 @@ class PrintWindow(Gtk.ApplicationWindow):
         box.append(self.status)
         self.set_child(box)
 
-    def on_page_setup(self, _button):
+    def on_page_setup(self, _button: Gtk.Button) -> None:
         # Blocks until the dialog is answered, and hands back a new page setup.
         self.page_setup = Gtk.print_run_page_setup_dialog(
             self, self.page_setup, self.settings
@@ -142,7 +146,7 @@ class PrintWindow(Gtk.ApplicationWindow):
         paper = self.page_setup.get_paper_size()
         self.status.set_text(f"Paper: {paper.get_display_name()}")
 
-    def run(self, action):
+    def run(self, action: Gio.SimpleAction) -> None:
         document = Document()
 
         operation = Gtk.PrintOperation()
@@ -169,7 +173,7 @@ class PrintWindow(Gtk.ApplicationWindow):
             self.status.set_text("Cancelled.")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     PrintWindow(application=app).present()
 
 

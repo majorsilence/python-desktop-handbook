@@ -34,7 +34,7 @@ PIPELINE = """
 """
 
 
-def on_pad_added(_element, pad, pipeline):
+def on_pad_added(_element: Gst.Element, pad: Gst.Pad, pipeline: Gst.Element) -> None:
     """Route each stream that appears into the right converter.
 
     A new pad may have no *current* caps yet if nothing has flowed through it, so
@@ -60,7 +60,7 @@ def on_pad_added(_element, pad, pipeline):
             print(f"could not link {kind}: {result.value_nick}")
 
 
-def report_progress(pipeline):
+def report_progress(pipeline: Gst.Element) -> bool:
     ok, position = pipeline.query_position(Gst.Format.TIME)
     ok2, duration = pipeline.query_duration(Gst.Format.TIME)
     if ok and ok2 and duration > 0:
@@ -68,7 +68,7 @@ def report_progress(pipeline):
     return GLib.SOURCE_CONTINUE
 
 
-def main():
+def main() -> int:
     source = sys.argv[1] if len(sys.argv) > 1 else str(ensure_sample())
     output = sys.argv[2] if len(sys.argv) > 2 else "transcoded.ogg"
 
@@ -80,7 +80,8 @@ def main():
     loop = GLib.MainLoop()
     status = {"code": 0}
 
-    def on_message(_bus, message, _data=None):
+    def on_message(_bus: Gst.Bus, message: Gst.Message,
+                   _data: object = None) -> bool:
         if message.type == Gst.MessageType.EOS:
             loop.quit()
         elif message.type == Gst.MessageType.ERROR:

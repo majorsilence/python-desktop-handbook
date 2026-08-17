@@ -13,6 +13,7 @@ than it needs gets clipped, and one that asks for more leaves holes.
 """
 
 import sys
+from typing import Any
 
 import gi
 
@@ -26,7 +27,7 @@ class WrapBox(Gtk.Widget):
 
     __gtype_name__ = "WrapBox"
 
-    def __init__(self, spacing=6, **kwargs):
+    def __init__(self, spacing=6, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.spacing = spacing
 
@@ -35,19 +36,19 @@ class WrapBox(Gtk.Widget):
     # GTK 4 has no GtkContainer. A child is added by parenting it to you, and the
     # widget itself keeps the list -- get_first_child()/get_next_sibling().
 
-    def append(self, child):
+    def append(self, child: Gtk.Widget) -> None:
         child.set_parent(self)
 
-    def remove(self, child):
+    def remove(self, child: Gtk.Widget) -> None:
         child.unparent()
 
-    def children(self):
+    def children(self) -> None:
         child = self.get_first_child()
         while child is not None:
             yield child
             child = child.get_next_sibling()
 
-    def do_dispose(self):
+    def do_dispose(self) -> None:
         # Every child must be unparented before the widget is finalised, or GTK
         # prints "Finalizing GtkWidget, but it still has children left".
         child = self.get_first_child()
@@ -59,7 +60,7 @@ class WrapBox(Gtk.Widget):
 
     # -- measuring --------------------------------------------------------------
 
-    def do_get_request_mode(self):
+    def do_get_request_mode(self) -> Gtk.SizeRequestMode:
         """Our height depends on our width, and GTK has to be told.
 
         The default is CONSTANT_SIZE, which means "height does not depend on
@@ -69,7 +70,8 @@ class WrapBox(Gtk.Widget):
         """
         return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
 
-    def do_measure(self, orientation, for_size):
+    def do_measure(self, orientation: Gtk.Orientation,
+                   for_size: int) -> tuple[int, int, int, int]:
         visible = [c for c in self.children() if c.get_visible()]
         if not visible:
             return 0, 0, -1, -1
@@ -92,11 +94,12 @@ class WrapBox(Gtk.Widget):
 
     # -- allocating -------------------------------------------------------------
 
-    def do_size_allocate(self, width, height, baseline):
+    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
         visible = [c for c in self.children() if c.get_visible()]
         self._layout(visible, width, allocate=True)
 
-    def _layout(self, visible, width, allocate=False):
+    def _layout(self, visible: list[Gtk.Widget], width: int,
+                allocate: bool = False) -> int:
         """Place children into rows; return the total height needed.
 
         The same walk both measures and allocates, so the two cannot disagree --
@@ -128,13 +131,13 @@ class WrapBox(Gtk.Widget):
 
     # -- drawing ----------------------------------------------------------------
 
-    def do_snapshot(self, snapshot):
+    def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
         # A container usually only needs to draw its children. The default
         # implementation does exactly that, so chaining up is enough.
         Gtk.Widget.do_snapshot(self, snapshot)
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     window = Adw.ApplicationWindow(application=app, title="Custom container")
     window.set_default_size(460, 320)
 

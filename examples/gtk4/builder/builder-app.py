@@ -30,12 +30,12 @@ class ExampleWindow(Gtk.ApplicationWindow):
     greeting = Gtk.Template.Child()
 
     @Gtk.Template.Callback()
-    def on_greet_clicked(self, _button):
+    def on_greet_clicked(self, _button: Gtk.Button) -> None:
         name = self.name_entry.get_text().strip() or "stranger"
         self.greeting.set_text(f"Hello, {name}!")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     ExampleWindow(application=app).present()
 
 

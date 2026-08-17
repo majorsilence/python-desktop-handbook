@@ -10,7 +10,7 @@ import cairo
 WIDTH, HEIGHT = 300, 200
 
 
-def draw(context):
+def draw(context: cairo.Context) -> None:
     context.set_source_rgb(1, 1, 1)
     context.paint()
 

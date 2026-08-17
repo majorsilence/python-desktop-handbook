@@ -9,11 +9,11 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
-def on_clicked(button, message):
+def on_clicked(button: Gtk.Button, message: str) -> None:
     print(message)
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Buttons")
     window.set_default_size(520, 120)
 

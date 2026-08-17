@@ -12,16 +12,17 @@ the display, so frames arrive slightly early or late and the motion judders.
 import math
 import sys
 
+import cairo
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk
 
 PERIOD_US = 3_000_000        # one full circuit, in microseconds
 
 
 class Orbit(Gtk.DrawingArea):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.start_time = None
         self.phase = 0.0
@@ -33,7 +34,7 @@ class Orbit(Gtk.DrawingArea):
         # own if the widget is unmapped.
         self.add_tick_callback(self.on_tick)
 
-    def on_tick(self, widget, frame_clock):
+    def on_tick(self, widget: Gtk.Widget, frame_clock: Gdk.FrameClock) -> bool:
         # Frame time is monotonic and in microseconds. Use the clock's time, not
         # time.monotonic(): it is the time the frame will be *displayed*, which is
         # what keeps motion smooth.
@@ -47,7 +48,8 @@ class Orbit(Gtk.DrawingArea):
         widget.queue_draw()
         return GLib.SOURCE_CONTINUE
 
-    def on_draw(self, _area, cr, width, height):
+    def on_draw(self, _area: Gtk.DrawingArea, cr: cairo.Context,
+                width: int, height: int) -> None:
         cr.set_source_rgb(0.99, 0.98, 0.96)
         cr.paint()
 
@@ -67,7 +69,7 @@ class Orbit(Gtk.DrawingArea):
         cr.fill()
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Frame clock")
     window.set_default_size(360, 260)
     window.set_child(Orbit())

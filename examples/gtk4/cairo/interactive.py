@@ -8,6 +8,7 @@ yourself -- GTK decides when to redraw, and may coalesce several requests.
 
 import sys
 
+import cairo
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -15,7 +16,7 @@ from gi.repository import Gtk
 
 
 class Sketch(Gtk.DrawingArea):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.points = []
         self.hover = None
@@ -33,7 +34,8 @@ class Sketch(Gtk.DrawingArea):
         motion.connect("leave", self.on_leave)
         self.add_controller(motion)
 
-    def on_draw(self, _area, cr, width, height):
+    def on_draw(self, _area: Gtk.DrawingArea, cr: cairo.Context,
+                width: int, height: int) -> None:
         cr.set_source_rgb(0.99, 0.98, 0.96)
         cr.paint()
 
@@ -65,23 +67,25 @@ class Sketch(Gtk.DrawingArea):
             cr.arc(self.hover[0], self.hover[1], 10, 0, 6.2832)
             cr.fill()
 
-    def on_pressed(self, gesture, n_press, x, y):
+    def on_pressed(self, gesture: Gtk.GestureClick, n_press: int,
+                   x: float, y: float) -> None:
         if n_press == 2:
             self.points.clear()             # double click starts over
         else:
             self.points.append((x, y))
         self.queue_draw()
 
-    def on_motion(self, _controller, x, y):
+    def on_motion(self, _controller: Gtk.EventControllerMotion,
+                  x: float, y: float) -> None:
         self.hover = (x, y)
         self.queue_draw()
 
-    def on_leave(self, _controller):
+    def on_leave(self, _controller: Gtk.EventControllerMotion) -> None:
         self.hover = None
         self.queue_draw()
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Click to draw")
     window.set_default_size(480, 360)
     window.set_child(Sketch())

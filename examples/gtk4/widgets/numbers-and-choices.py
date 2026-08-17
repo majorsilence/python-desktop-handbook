@@ -12,7 +12,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Numbers and choices")
     window.set_default_size(360, 220)
 

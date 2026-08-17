@@ -20,7 +20,7 @@ from gi.repository import GLib, Gst
 Gst.init(None)
 
 
-def build():
+def build() -> Gst.Element:
     """audiotestsrc -> audioconvert -> fakesink, wired up one element at a time."""
     pipeline = Gst.Pipeline.new("tone")
 
@@ -45,7 +45,7 @@ def build():
     return pipeline
 
 
-def on_message(_bus, message, loop):
+def on_message(_bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop) -> bool:
     """Messages arrive on the main loop, not on the streaming thread."""
     kind = message.type
 

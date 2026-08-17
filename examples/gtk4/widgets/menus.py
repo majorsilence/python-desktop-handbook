@@ -8,19 +8,21 @@ can drive a menu bar, a popover menu and a keyboard shortcut at once.
 
 import sys
 
+from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, Gtk
 
 
-def add_action(app, name, callback):
+def add_action(app: Gtk.Application, name: str,
+               callback: Callable[..., None]) -> None:
     action = Gio.SimpleAction.new(name, None)
     action.connect("activate", callback)
     app.add_action(action)
 
 
-def build_menu():
+def build_menu() -> Gio.Menu:
     menu = Gio.Menu()
 
     file_menu = Gio.Menu()
@@ -39,7 +41,7 @@ def build_menu():
     return menu
 
 
-def on_startup(app):
+def on_startup(app: Gtk.Application) -> None:
     add_action(app, "new", lambda *_: print("New"))
     add_action(app, "open", lambda *_: print("Open"))
     add_action(app, "about", lambda *_: print("About"))
@@ -52,7 +54,7 @@ def on_startup(app):
     app.set_menubar(build_menu())
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Menus")
     window.set_default_size(420, 200)
     window.set_show_menubar(True)

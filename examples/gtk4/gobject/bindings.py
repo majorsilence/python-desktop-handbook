@@ -22,7 +22,7 @@ class Settings(GObject.Object):
     label = GObject.Property(type=str, default="")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Bindings")
     window.set_default_size(420, 340)
 
@@ -69,7 +69,7 @@ def on_activate(app):
     # When the two properties are not the same type or the same scale, supply a
     # transform. Returning False from it rejects the value and leaves the target
     # alone; returning (True, value) accepts it.
-    def to_percent(_binding, value):
+    def to_percent(_binding: GObject.Binding, value: float) -> tuple[bool, str]:
         return True, f"{value * 100:.0f}%"
 
     settings.bind_property("volume", percent, "label",

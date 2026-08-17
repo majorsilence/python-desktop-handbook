@@ -35,7 +35,7 @@ PIPELINE = """
 """
 
 
-def ensure_sample():
+def ensure_sample() -> pathlib.Path:
     """Return the path to a three-second test clip, making it if need be."""
     if SAMPLE.exists():
         return SAMPLE

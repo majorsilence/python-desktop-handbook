@@ -16,14 +16,14 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Graphene, Gsk, Gtk
 
 
-def rgba(red, green, blue, alpha=1.0):
+def rgba(red: float, green: float, blue: float, alpha: float = 1.0) -> Gdk.RGBA:
     """Boxed types like GdkRGBA are built empty and filled in, not constructed."""
     colour = Gdk.RGBA()
     colour.red, colour.green, colour.blue, colour.alpha = red, green, blue, alpha
     return colour
 
 
-def color_stop(offset, colour):
+def color_stop(offset: float, colour: Gdk.RGBA) -> Gsk.ColorStop:
     stop = Gsk.ColorStop()
     stop.offset = offset
     stop.color = colour
@@ -35,12 +35,12 @@ class Meter(Gtk.Widget):
 
     __gtype_name__ = "Meter"
 
-    def __init__(self, fraction=0.6):
+    def __init__(self, fraction: float = 0.6) -> None:
         super().__init__()
         self.fraction = fraction
         self.set_size_request(-1, 24)
 
-    def do_snapshot(self, snapshot):
+    def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
         width = self.get_width()
         height = self.get_height()
 
@@ -65,12 +65,12 @@ class Meter(Gtk.Widget):
         )
         snapshot.pop()
 
-    def set_fraction(self, fraction):
+    def set_fraction(self, fraction: float) -> None:
         self.fraction = max(0.0, min(1.0, fraction))
         self.queue_draw()
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Snapshot Widget")
     window.set_default_size(400, 160)
 

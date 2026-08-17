@@ -12,6 +12,7 @@ property; a callback target hands it to a function.
 """
 
 import sys
+from typing import Any
 
 import gi
 
@@ -28,7 +29,7 @@ EASINGS = [
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Animations")
         self.set_default_size(520, 320)
@@ -108,10 +109,10 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(box)
         self.set_content(toolbar)
 
-    def on_slide(self, value):
+    def on_slide(self, value: float) -> None:
         self.dot.set_margin_start(int(value))
 
-    def on_play(self, _button, animation):
+    def on_play(self, _button: Gtk.Button, animation: Adw.Animation) -> None:
         # Playing an animation that is already running restarts it; reset() puts
         # it back to the start without playing.
         self.dot.set_margin_start(0)
@@ -119,7 +120,7 @@ class Window(Adw.ApplicationWindow):
         animation.play()
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(application=app).present()
 
 

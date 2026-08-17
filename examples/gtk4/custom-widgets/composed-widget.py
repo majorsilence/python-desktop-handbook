@@ -12,6 +12,7 @@ This one is a search-and-filter bar: it looks like one widget from outside, has 
 """
 
 import sys
+from typing import Any
 
 import gi
 
@@ -31,10 +32,10 @@ class SearchBar(Gtk.Box):
     scope = GObject.Property(type=int, default=0)
 
     @GObject.Signal(arg_types=(str, int))
-    def search_requested(self, query, scope):
+    def search_requested(self, query: str, scope: str) -> None:
         """Default handler; there is nothing for it to do."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=6, **kwargs)
         self.add_css_class("toolbar")
 
@@ -58,17 +59,17 @@ class SearchBar(Gtk.Box):
         self._entry.connect("activate", lambda _e: self.emit_search())
         self._button.connect("clicked", lambda _b: self.emit_search())
 
-    def emit_search(self):
+    def emit_search(self) -> None:
         self.emit("search-requested", self.query, self.scope)
 
-    def grab_focus(self):
+    def grab_focus(self) -> bool:
         # Overriding this makes the composed widget behave like one widget when
         # something focuses it.
         return self._entry.grab_focus()
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Composed widget")
         self.set_default_size(520, 260)
@@ -107,7 +108,7 @@ class Window(Adw.ApplicationWindow):
         search.grab_focus()
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(application=app).present()
 
 

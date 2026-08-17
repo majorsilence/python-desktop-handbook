@@ -20,7 +20,7 @@ from gi.repository import Gio, Gtk
 APP_ID = "com.example.Notification"
 
 
-def send(app):
+def send(app: Gtk.Application) -> None:
     notification = Gio.Notification.new("Export finished")
     notification.set_body("holiday-photos.zip is ready in your Downloads folder.")
     notification.set_icon(Gio.ThemedIcon.new("document-save-symbolic"))
@@ -34,13 +34,13 @@ def send(app):
     app.send_notification("export-done", notification)
 
 
-def on_startup(app):
+def on_startup(app: Gtk.Application) -> None:
     action = Gio.SimpleAction.new("reveal", None)
     action.connect("activate", lambda *_: print("reveal the file"))
     app.add_action(action)
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Notifications")
     window.set_default_size(360, 140)
 

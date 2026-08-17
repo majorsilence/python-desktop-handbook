@@ -14,7 +14,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
 
 
-def text_filters():
+def text_filters() -> Gio.ListStore:
     """A dialog's filters are a list model of GtkFileFilter."""
     filters = Gio.ListStore(item_type=Gtk.FileFilter)
 
@@ -32,13 +32,14 @@ def text_filters():
     return filters
 
 
-def open_file(window, label):
+def open_file(window: Gtk.Window, label: Gtk.Label) -> None:
     dialog = Gtk.FileDialog(title="Open a file")
     dialog.set_filters(text_filters())
     dialog.open(window, None, on_opened, label)
 
 
-def on_opened(dialog, result, label):
+def on_opened(dialog: Gtk.FileDialog, result: Gio.AsyncResult,
+              label: Gtk.Label) -> None:
     try:
         file = dialog.open_finish(result)
     except GLib.Error:
@@ -56,14 +57,15 @@ def on_opened(dialog, result, label):
     label.set_text(f"{file.get_basename()}: {len(text)} characters")
 
 
-def save_file(window, label):
+def save_file(window: Gtk.Window, label: Gtk.Label) -> None:
     dialog = Gtk.FileDialog(title="Save as")
     dialog.set_initial_name("untitled.txt")
     dialog.set_filters(text_filters())
     dialog.save(window, None, on_saved, label)
 
 
-def on_saved(dialog, result, label):
+def on_saved(dialog: Gtk.FileDialog, result: Gio.AsyncResult,
+             label: Gtk.Label) -> None:
     try:
         file = dialog.save_finish(result)
     except GLib.Error:
@@ -82,12 +84,13 @@ def on_saved(dialog, result, label):
     label.set_text(f"Wrote {file.get_path()}")
 
 
-def choose_folder(window, label):
+def choose_folder(window: Gtk.Window, label: Gtk.Label) -> None:
     dialog = Gtk.FileDialog(title="Choose a folder")
     dialog.select_folder(window, None, on_folder_chosen, label)
 
 
-def on_folder_chosen(dialog, result, label):
+def on_folder_chosen(dialog: Gtk.FileDialog, result: Gio.AsyncResult,
+                     label: Gtk.Label) -> None:
     try:
         folder = dialog.select_folder_finish(result)
     except GLib.Error:
@@ -96,7 +99,7 @@ def on_folder_chosen(dialog, result, label):
     label.set_text(f"Chose {folder.get_path()}")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="File Dialog")
     window.set_default_size(420, 160)
 

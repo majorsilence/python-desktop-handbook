@@ -11,10 +11,10 @@ import sys
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import GLib, Gtk
+from gi.repository import Gio, GLib, Gtk
 
 
-def ask_to_delete(window, label):
+def ask_to_delete(window: Gtk.Window, label: Gtk.Label) -> None:
     dialog = Gtk.AlertDialog()
     dialog.set_message("Delete this file?")
     dialog.set_detail("Once it is gone it is gone. There is no undo.")
@@ -24,7 +24,8 @@ def ask_to_delete(window, label):
     dialog.choose(window, None, on_choice, label)
 
 
-def on_choice(dialog, result, label):
+def on_choice(dialog: Gtk.AlertDialog, result: Gio.AsyncResult,
+              label: Gtk.Label) -> None:
     try:
         button = dialog.choose_finish(result)
     except GLib.Error:
@@ -34,7 +35,7 @@ def on_choice(dialog, result, label):
     label.set_text("Deleted" if button == 1 else "Cancelled")
 
 
-def show_note(window):
+def show_note(window: Gtk.Window) -> None:
     """A dialog with a single button needs no callback at all."""
     dialog = Gtk.AlertDialog()
     dialog.set_message("Nothing happened")
@@ -42,7 +43,7 @@ def show_note(window):
     dialog.show(window)
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Dialogs")
     window.set_default_size(360, 160)
 

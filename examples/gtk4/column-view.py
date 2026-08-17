@@ -20,7 +20,7 @@ class Package(GObject.Object):
     version = GObject.Property(type=str, default="")
     size = GObject.Property(type=int, default=0)
 
-    def __init__(self, name, version, size):
+    def __init__(self, name: str, version: str, size: int) -> None:
         super().__init__(name=name, version=version, size=size)
 
 
@@ -33,14 +33,15 @@ PACKAGES = [
 ]
 
 
-def text_column(title, attribute, expand=False, numeric=False):
+def text_column(title: str, attribute: str, expand: bool = False,
+                numeric: bool = False) -> Gtk.ColumnViewColumn:
     """A column that shows one string property of the item."""
 
-    def setup(_factory, list_item):
+    def setup(_factory: Gtk.SignalListItemFactory, list_item: Gtk.ListItem) -> None:
         label = Gtk.Label(xalign=1 if numeric else 0)
         list_item.set_child(label)
 
-    def bind(_factory, list_item):
+    def bind(_factory: Gtk.SignalListItemFactory, list_item: Gtk.ListItem) -> None:
         value = list_item.get_item().get_property(attribute)
         text = f"{value:,} kB" if numeric else str(value)
         list_item.get_child().set_text(text)
@@ -62,7 +63,7 @@ def text_column(title, attribute, expand=False, numeric=False):
     return column
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Column View")
     window.set_default_size(520, 320)
 

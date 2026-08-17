@@ -13,7 +13,9 @@ GLib.idle_add is the entire interface between a worker and the interface.
 import sys
 import threading
 import time
+from typing import Any
 
+from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -23,7 +25,8 @@ from gi.repository import Adw, GLib, Gtk
 STEPS = 40
 
 
-def slow_work(cancel, report):
+def slow_work(cancel: threading.Event,
+              report: Callable[[int, int], None]) -> int | None:
     """Runs on a worker thread. Touches no widgets, only `report`."""
     total = 0
     for step in range(STEPS):
@@ -36,7 +39,7 @@ def slow_work(cancel, report):
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Worker thread")
         self.set_default_size(420, 260)
@@ -74,7 +77,7 @@ class Window(Adw.ApplicationWindow):
 
     # -- main thread ------------------------------------------------------------
 
-    def on_start(self, _button):
+    def on_start(self, _button: Gtk.Button) -> None:
         if self.thread is not None:
             return
 
@@ -87,14 +90,14 @@ class Window(Adw.ApplicationWindow):
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
-    def on_cancel(self, _button):
+    def on_cancel(self, _button: Gtk.Button) -> None:
         if self.cancel is not None:
             self.cancel.set()
             self.status.set_text("cancelling…")
 
     # -- worker thread ----------------------------------------------------------
 
-    def run(self):
+    def run(self) -> None:
         """Everything in here is off the main thread. No widget access."""
         result = slow_work(self.cancel, self.report_progress)
 
@@ -102,17 +105,17 @@ class Window(Adw.ApplicationWindow):
         # callback runs on the main thread.
         GLib.idle_add(self.on_finished, result)
 
-    def report_progress(self, done, total):
+    def report_progress(self, done: int, total: int) -> None:
         GLib.idle_add(self.on_progress, done, total)
 
     # -- main thread again, via idle_add ----------------------------------------
 
-    def on_progress(self, done, total):
+    def on_progress(self, done: int, total: int) -> bool:
         self.progress.set_fraction(done / total)
         self.progress.set_text(f"{done} of {total}")
         return GLib.SOURCE_REMOVE       # run once, not every idle
 
-    def on_finished(self, result):
+    def on_finished(self, result: int | None) -> bool:
         self.thread = None
         self.cancel = None
         self.start_button.set_sensitive(True)
@@ -127,7 +130,7 @@ class Window(Adw.ApplicationWindow):
         return GLib.SOURCE_REMOVE
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(application=app).present()
 
 

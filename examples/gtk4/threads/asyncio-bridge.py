@@ -17,7 +17,10 @@ dependency whose maintenance you are relying on.
 import asyncio
 import sys
 import threading
+from typing import Any
 
+from collections.abc import Callable, Coroutine
+from concurrent.futures import Future
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -28,20 +31,21 @@ from gi.repository import Adw, GLib, Gtk
 class AsyncioThread:
     """An asyncio event loop living on its own thread."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
 
-    def _run(self):
+    def _run(self) -> None:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
-    def submit(self, coro, on_done):
+    def submit(self, coro: Coroutine[Any, Any, Any],
+               on_done: Callable[..., Any]) -> Future[Any]:
         """Run a coroutine on the asyncio loop; call on_done(result, error)
         back on the GTK main thread."""
 
-        def finished(future):
+        def finished(future: Future[Any]) -> None:
             try:
                 GLib.idle_add(on_done, future.result(), None)
             except Exception as error:               # noqa: BLE001 - reported, not swallowed
@@ -53,11 +57,11 @@ class AsyncioThread:
         future.add_done_callback(finished)
         return future
 
-    def stop(self):
+    def stop(self) -> None:
         self.loop.call_soon_threadsafe(self.loop.stop)
 
 
-async def pretend_to_fetch(name, seconds):
+async def pretend_to_fetch(name: str, seconds: float) -> str:
     """Stand-in for an async library call -- httpx, aiohttp, asyncpg."""
     await asyncio.sleep(seconds)
     if name == "broken":
@@ -65,7 +69,7 @@ async def pretend_to_fetch(name, seconds):
     return f"{name}: {seconds}s"
 
 
-async def fetch_several():
+async def fetch_several() -> list[str]:
     """Concurrency is the reason to do any of this: three requests in the time of
     the slowest, on one thread.
 
@@ -82,7 +86,7 @@ async def fetch_several():
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, runner, **kwargs):
+    def __init__(self, runner, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.runner = runner
         self.set_title("asyncio bridge")
@@ -114,11 +118,11 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(box)
         self.set_content(toolbar)
 
-    def note(self, text):
+    def note(self, text: str) -> None:
         self.lines.append(text)
         self.status.set_text("\n".join(self.lines[-6:]))
 
-    def on_fetch(self, _button, name, delay):
+    def on_fetch(self, _button: Gtk.Button, name: str, delay: float) -> None:
         if name == "many":
             coro = fetch_several()
         else:
@@ -127,7 +131,7 @@ class Window(Adw.ApplicationWindow):
         self.note(f"started {name}…")
         self.runner.submit(coro, self.on_done)
 
-    def on_done(self, result, error):
+    def on_done(self, result: object, error: Exception | None) -> bool:
         """Back on the GTK main thread, so touching widgets is allowed again."""
         if error is not None:
             self.note(f"failed: {error}")
@@ -136,7 +140,7 @@ class Window(Adw.ApplicationWindow):
         return GLib.SOURCE_REMOVE
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(app.runner, application=app).present()
 
 

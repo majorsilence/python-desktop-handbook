@@ -8,6 +8,7 @@ duration is the whole of it.
 """
 
 import sys
+from typing import Any
 
 import gi
 
@@ -24,7 +25,7 @@ TRANSITIONS = [
 ]
 
 
-def page(text, colour_class):
+def page(text: str, colour_class: str) -> Gtk.Widget:
     label = Gtk.Label(label=text)
     label.add_css_class(colour_class)
     label.set_vexpand(True)
@@ -33,7 +34,7 @@ def page(text, colour_class):
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Transitions")
         self.set_default_size(520, 380)
@@ -86,7 +87,7 @@ class Window(Adw.ApplicationWindow):
         self.set_content(toolbar)
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(application=app).present()
 
 

@@ -16,18 +16,20 @@ NAME = "com.example.Counter"
 PATH = "/com/example/Counter"
 
 
-def on_signal(_proxy, _sender, signal, parameters):
+def on_signal(_proxy: Gio.DBusProxy, _sender: str, signal: str,
+              parameters: GLib.Variant) -> None:
     print(f"signal {signal}{parameters.unpack()}")
 
 
-def on_properties_changed(proxy, changed, invalidated):
+def on_properties_changed(proxy: Gio.DBusProxy, changed: GLib.Variant,
+                          invalidated: list[str]) -> None:
     for key in changed.keys():
         print(f"property {key} is now {proxy.get_cached_property(key).unpack()}")
     for key in invalidated:
         print(f"property {key} changed, value not sent")
 
 
-def main():
+def main() -> int:
     try:
         proxy = Gio.DBusProxy.new_for_bus_sync(
             Gio.BusType.SESSION,
@@ -70,7 +72,8 @@ def main():
     # a synchronous one blocks the interface until the reply arrives.
     loop = GLib.MainLoop()
 
-    def on_reset(proxy, result, _data=None):
+    def on_reset(proxy: Gio.DBusProxy, result: Gio.AsyncResult,
+                 _data: object = None) -> None:
         try:
             proxy.call_finish(result)
             print("Reset()      -> done")

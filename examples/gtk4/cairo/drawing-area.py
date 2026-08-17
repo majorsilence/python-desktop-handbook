@@ -8,13 +8,15 @@ given a draw function, and GTK calls it with a context and the current size.
 import math
 import sys
 
+import cairo
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
-def draw(_area, context, width, height):
+def draw(_area: Gtk.DrawingArea, context: cairo.Context,
+         width: int, height: int) -> None:
     """Called whenever the area needs repainting. Never call it yourself."""
     # The context is already clipped to the area, and the origin is its top left.
     context.set_source_rgb(0.98, 0.97, 0.94)
@@ -34,7 +36,7 @@ def draw(_area, context, width, height):
     context.stroke()
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Drawing Area")
     window.set_default_size(400, 300)
 

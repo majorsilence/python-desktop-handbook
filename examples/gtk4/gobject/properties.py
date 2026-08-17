@@ -25,21 +25,21 @@ class Person(GObject.Object):
 
     # Read-only from outside: no setter, so it cannot be assigned.
     @GObject.Property(type=str, flags=GObject.ParamFlags.READABLE)
-    def summary(self):
+    def summary(self) -> str:
         return f"{self.name}, aged {self.age}"
 
     # The explicit form, when setting has to do something. Note the property name
     # seen by GTK is the attribute name with underscores turned into hyphens:
     # "nickname" here, but "date-of-birth" for a date_of_birth attribute.
     @GObject.Property(type=str)
-    def nickname(self):
+    def nickname(self) -> str:
         return self._nickname
 
     @nickname.setter
-    def nickname(self, value):
+    def nickname(self, value: float) -> None:
         self._nickname = value.strip().title()
 
-    def __init__(self, name="", age=0):
+    def __init__(self, name: str = "", age: int = 0) -> None:
         super().__init__(name=name, age=age)
         self._nickname = ""
 
@@ -48,7 +48,7 @@ class Person(GObject.Object):
         self.connect("notify::age", lambda *_: self.notify("summary"))
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Properties")
     window.set_default_size(420, 300)
 

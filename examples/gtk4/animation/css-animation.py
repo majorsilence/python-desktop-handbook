@@ -55,7 +55,7 @@ CSS = b"""
 """
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     # A CSS provider is loaded once and added to the display, not to a widget.
     provider = Gtk.CssProvider()
     provider.load_from_data(CSS)

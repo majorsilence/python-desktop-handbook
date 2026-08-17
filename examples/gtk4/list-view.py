@@ -22,11 +22,11 @@ class Task(GObject.Object):
     title = GObject.Property(type=str, default="")
     done = GObject.Property(type=bool, default=False)
 
-    def __init__(self, title, done=False):
+    def __init__(self, title: str, done: bool = False) -> None:
         super().__init__(title=title, done=done)
 
 
-def on_setup(_factory, list_item):
+def on_setup(_factory: Gtk.SignalListItemFactory, list_item: Gtk.ListItem) -> None:
     """Build an empty row. Called once per row widget, then reused."""
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
     box.append(Gtk.CheckButton())
@@ -34,7 +34,7 @@ def on_setup(_factory, list_item):
     list_item.set_child(box)
 
 
-def on_bind(_factory, list_item):
+def on_bind(_factory: Gtk.SignalListItemFactory, list_item: Gtk.ListItem) -> None:
     """Point an existing row at an item. Called every time a row is recycled."""
     task = list_item.get_item()
     box = list_item.get_child()
@@ -49,14 +49,14 @@ def on_bind(_factory, list_item):
     )
 
 
-def on_unbind(_factory, list_item):
+def on_unbind(_factory: Gtk.SignalListItemFactory, list_item: Gtk.ListItem) -> None:
     binding = getattr(list_item, "binding", None)
     if binding is not None:
         binding.unbind()
         list_item.binding = None
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="List View")
     window.set_default_size(360, 320)
 

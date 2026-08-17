@@ -9,16 +9,16 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
-def on_button_clicked(button):
+def on_button_clicked(button: Gtk.Button) -> None:
     button.set_label("Clicked!")
 
 
-def on_counter_clicked(button, state):
+def on_counter_clicked(button: Gtk.Button, state: dict[str, int]) -> None:
     state["count"] += 1
     button.set_label(f"Clicked {state['count']} times")
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     window = Gtk.ApplicationWindow(application=app, title="Callbacks")
     window.set_default_size(320, 140)
 

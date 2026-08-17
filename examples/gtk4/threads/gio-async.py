@@ -13,6 +13,7 @@ Every one of these follows the same shape as the dialogs in earlier chapters:
 
 import pathlib
 import sys
+from typing import Any
 
 import gi
 
@@ -24,7 +25,7 @@ HERE = pathlib.Path(__file__).parent
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Asynchronous I/O")
         self.set_default_size(520, 400)
@@ -61,23 +62,24 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(box)
         self.set_content(toolbar)
 
-    def show(self, text):
+    def show(self, text: str) -> None:
         self.view.get_buffer().set_text(text)
 
-    def on_cancel(self, _button):
+    def on_cancel(self, _button: Gtk.Button) -> None:
         if self.cancellable is not None:
             self.cancellable.cancel()
 
     # -- reading a file ---------------------------------------------------------
 
-    def on_read(self, _button):
+    def on_read(self, _button: Gtk.Button) -> None:
         self.cancellable = Gio.Cancellable()
         self.status.set_text("reading…")
 
         file = Gio.File.new_for_path(str(HERE / "gio-async.py"))
         file.load_contents_async(self.cancellable, self.on_read_done)
 
-    def on_read_done(self, file, result, _data=None):
+    def on_read_done(self, file: Gio.File, result: Gio.AsyncResult,
+                     _data: object = None) -> None:
         try:
             ok, contents, _etag = file.load_contents_finish(result)
         except GLib.Error as error:
@@ -94,7 +96,7 @@ class Window(Adw.ApplicationWindow):
 
     # -- listing a directory ----------------------------------------------------
 
-    def on_list(self, _button):
+    def on_list(self, _button: Gtk.Button) -> None:
         self.cancellable = Gio.Cancellable()
         self.status.set_text("listing…")
 
@@ -107,7 +109,8 @@ class Window(Adw.ApplicationWindow):
             self.on_enumerate_done,
         )
 
-    def on_enumerate_done(self, folder, result, _data=None):
+    def on_enumerate_done(self, folder: Gio.File, result: Gio.AsyncResult,
+                          _data: object = None) -> None:
         try:
             enumerator = folder.enumerate_children_finish(result)
         except GLib.Error as error:
@@ -117,7 +120,8 @@ class Window(Adw.ApplicationWindow):
         enumerator.next_files_async(50, GLib.PRIORITY_DEFAULT,
                                     self.cancellable, self.on_files_done)
 
-    def on_files_done(self, enumerator, result, _data=None):
+    def on_files_done(self, enumerator: Gio.FileEnumerator, result: Gio.AsyncResult,
+                      _data: object = None) -> None:
         try:
             infos = enumerator.next_files_finish(result)
         except GLib.Error as error:
@@ -129,7 +133,7 @@ class Window(Adw.ApplicationWindow):
         self.show("\n".join(sorted(lines)))
 
 
-def on_activate(app):
+def on_activate(app: Adw.Application) -> None:
     Window(application=app).present()
 
 

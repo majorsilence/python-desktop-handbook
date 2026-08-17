@@ -19,7 +19,7 @@ cr.set_source_rgb(1, 1, 1)
 cr.paint()
 
 
-def panel(x, y, title):
+def panel(x: float, y: float, title: str) -> None:
     """Move the origin to a cell of a 2x2 grid and label it."""
     cr.save()                    # push the current transform and state
     cr.translate(x, y)
@@ -30,7 +30,7 @@ def panel(x, y, title):
     cr.show_text(title)
 
 
-def end_panel():
+def end_panel() -> None:
     cr.restore()                 # pop it again
 
 

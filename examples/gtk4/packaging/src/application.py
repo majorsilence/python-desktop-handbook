@@ -8,6 +8,7 @@ smoke-test: skip
 """
 
 import gettext
+from typing import Any
 
 import gi
 
@@ -26,19 +27,19 @@ class Window(Adw.ApplicationWindow):
     greeting = Gtk.Template.Child()
     count_button = Gtk.Template.Child()
 
-    def __init__(self, settings, **kwargs):
+    def __init__(self, settings, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.settings = settings
         self.count = settings.get_int("count")
         self.update()
 
     @Gtk.Template.Callback()
-    def on_count_clicked(self, _button):
+    def on_count_clicked(self, _button: Gtk.Button) -> None:
         self.count += 1
         self.settings.set_int("count", self.count)
         self.update()
 
-    def update(self):
+    def update(self) -> None:
         self.greeting.set_text(
             gettext.ngettext("Counted once.", "Counted {n} times.", self.count)
             .format(n=self.count)
@@ -46,7 +47,7 @@ class Window(Adw.ApplicationWindow):
 
 
 class Application(Adw.Application):
-    def __init__(self, version):
+    def __init__(self, version: str) -> None:
         super().__init__(application_id=APP_ID,
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.version = version
@@ -62,11 +63,11 @@ class Application(Adw.Application):
             if accels:
                 self.set_accels_for_action(f"app.{name}", accels)
 
-    def do_activate(self):
+    def do_activate(self) -> None:
         window = self.props.active_window or Window(self.settings, application=self)
         window.present()
 
-    def on_about(self, *_args):
+    def on_about(self, *_args: object) -> None:
         Adw.AboutDialog(
             application_name=_("Example App"),
             application_icon=APP_ID,
@@ -75,5 +76,5 @@ class Application(Adw.Application):
         ).present(self.props.active_window)
 
 
-def main(version):
+def main(version: str) -> int:
     return Application(version).run(None)
