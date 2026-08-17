@@ -29,7 +29,7 @@ already looks: `~/.local/bin`, `~/.local/share/applications`,
 ## Build it as a Flatpak
 
 ```sh
-flatpak install flathub org.gnome.Platform//48 org.gnome.Sdk//48
+flatpak install flathub org.gnome.Platform//50 org.gnome.Sdk//50
 flatpak-builder --user --install --force-clean build-flatpak com.example.ExampleApp.json
 flatpak run com.example.ExampleApp
 ```

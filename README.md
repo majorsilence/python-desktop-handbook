@@ -11,7 +11,8 @@ Read it online at <https://python-desktop-handbook.majorsilence.com/>, or downlo
 It began as *PyGTK Notebook*, one person's notes on PyGTK and GTK 2. That
 edition is in the git history; this one is rewritten from it.
 
-**Part I — GTK 4 with PyGObject — is complete.** Part II, covering the same
+**Part I — GTK 4 with PyGObject — is complete**, and targets the GNOME 50 stack:
+GTK 4.22, libadwaita 1.9, PyGObject 3.56, Wayland only. Part II, covering the same
 ground with Qt 6 and PySide6, is not written yet.
 
 ## Repository layout

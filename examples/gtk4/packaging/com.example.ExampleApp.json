@@ -1,7 +1,7 @@
 {
     "id": "com.example.ExampleApp",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "48",
+    "runtime-version": "50",
     "sdk": "org.gnome.Sdk",
     "command": "example-app",
 

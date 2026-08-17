@@ -232,7 +232,7 @@ distribution has, and it sandboxes the result.
 {
     "id": "com.example.ExampleApp",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "48",
+    "runtime-version": "50",
     "sdk": "org.gnome.Sdk",
     "command": "example-app",
 
@@ -254,7 +254,7 @@ distribution has, and it sandboxes the result.
 ```
 
 ```bash
-flatpak install flathub org.gnome.Platform//48 org.gnome.Sdk//48
+flatpak install flathub org.gnome.Platform//50 org.gnome.Sdk//50
 flatpak-builder --user --install --force-clean build com.example.ExampleApp.json
 flatpak run com.example.ExampleApp
 ```

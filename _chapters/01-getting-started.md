@@ -45,15 +45,69 @@ sudo dnf install python3-gobject gtk4 libadwaita
 sudo pacman -S python-gobject gtk4 libadwaita
 ```
 
-Check the result. This prints the running GTK version and exits:
+Check the result. This prints the running GTK and libadwaita versions and exits:
 
 ```bash
-python3 -c "import gi; gi.require_version('Gtk','4.0'); \
-  from gi.repository import Gtk; print(Gtk.get_major_version(), Gtk.get_minor_version())"
+python3 -c "import gi; gi.require_version('Gtk','4.0'); gi.require_version('Adw','1'); \
+  from gi.repository import Gtk, Adw; \
+  print('GTK', Gtk.get_major_version(), Gtk.get_minor_version()); \
+  print('Adw', Adw.MAJOR_VERSION, Adw.MINOR_VERSION)"
 ```
 
-Everything in this book was written against GTK 4.10 or later. Where a feature
-needs something newer, the text says so.
+### What this book targets {#versions}
+
+Everything here was written and tested against the GNOME 50 stack:
+
+| Component | Version | Where it comes from |
+| --- | --- | --- |
+| GTK | 4.22 | your distribution |
+| libadwaita | 1.9 | your distribution |
+| PyGObject | 3.56 | your distribution |
+| Python | 3.12 or later | your distribution |
+
+That is what shipped in March 2026, and what Ubuntu 26.04 LTS and Fedora 44 carry.
+The book does not chase the newest API for its own sake, and most of it works
+several releases back — but where a section needs something recent it says which
+version, like this:
+
+> **libadwaita 1.4.** `Adw.Breakpoint` needs it. On older versions the window
+> still works; it just does not adapt.
+
+Two version numbers are worth committing to memory, because they are where the
+current idioms arrived: **GTK 4.10**, which deprecated the blocking dialogs and
+introduced the asynchronous ones, and **libadwaita 1.5**, which introduced
+`Adw.Dialog`. Code older than those two will look noticeably different from
+everything in this book.
+
+Python 3.12 is the floor for the examples, which use `type` statements and modern
+generics in their annotations. PyGObject 3.50 is the floor for the `async`/`await`
+integration in [Threads and Asynchronous Work](04-threads-and-async.html); the
+rest of the book does not need it.
+
+### This book assumes Wayland {#wayland}
+
+GNOME 50 removed its X11 session. GNOME now runs on Wayland only, and so does the
+advice in this book. Nothing here is X11-specific, but a few habits carried over
+from X11 are worth unlearning now rather than debugging later:
+
+- **A window cannot position itself.** There is no `move()`, no way to ask for
+  screen coordinates, and no way to place a window under the pointer. The
+  compositor decides. Dialogs get placed correctly only because you told them
+  which window is their parent — which is why every dialog call in this book
+  passes one.
+- **A window does not know where it is**, only how big it is.
+- **You cannot read the screen or other windows.** Screenshots, screen sharing and
+  global shortcuts go through portals, which ask the user. That is
+  [Desktop Integration](08-desktop-integration.html).
+- **Scaling can be fractional.** Do not assume the scale factor is a whole number,
+  and draw in logical units rather than pixels wherever you can. The
+  [Cairo](05-drawing-with-cairo.html) chapter comes back to this.
+
+XWayland still runs X11 clients, so an old application keeps working; the point is
+that new code should not be written against those assumptions. If you are testing
+on a headless machine, the examples run under `xvfb-run` — that is XWayland's
+territory rather than a recommendation, and it is only how this book's own build
+takes its screenshots.
 
 ### The two lines at the top of every program
 
