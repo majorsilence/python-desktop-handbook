@@ -32,8 +32,9 @@ Part I — GTK 4 with PyGObject — is complete:
   `Gio.ListStore`, `Gtk.FileDialog`, drag and drop through controllers,
   `Gtk.Picture`, `Gtk.Template`, notifications.
 - **[Threads and Asynchronous Work](04-threads-and-async.html)** — new. Gio's
-  async APIs, worker threads, cancellation and asyncio. `gdk_threads_enter()` is
-  gone and has no replacement.
+  async APIs, worker threads, cancellation, and `async`/`await` on the GLib main
+  loop through PyGObject's own asyncio integration. `gdk_threads_enter()` is gone
+  and has no replacement.
 - **[Drawing with Cairo](05-drawing-with-cairo.html)** — Cairo through
   `Gtk.DrawingArea`, Pango for text, `GtkSnapshot` for widget drawing.
 - **[Custom Widgets](06-custom-widgets.html)** — new, and finally written: the
@@ -53,6 +54,9 @@ Part I — GTK 4 with PyGObject — is complete:
   gtkmozembed, and the JavaScript bridge.
 - **[Internationalization](13-internationalization.html)** — gettext without
   intltool, and the two text-domain bindings GTK needs.
+- **[Testing](14-testing.html)** — new. Keeping the rules out of the widgets,
+  testing that properties notify, widget tests, headless runs, smoke tests and
+  type checking.
 - **[Packaging and Distribution](15-packaging.html)** — replaces IronPython and
   Gtk#. Meson, GResource, AppStream metadata and Flatpak.
 - **[Migrating from PyGTK](92-migrating-from-pygtk.html)** — a translation table
@@ -61,6 +65,29 @@ Part I — GTK 4 with PyGObject — is complete:
 The appendices were rewritten too: *Icon Names* is now a stock-item to icon-name
 mapping rather than the GTK 2 stock list, and the bibliography is now *Further
 Reading*, pointing at documentation that still exists.
+
+### Brought up to GNOME 50
+
+The text targets the GNOME 50 stack — GTK 4.22, libadwaita 1.9, PyGObject 3.56 —
+and the Flatpak manifest builds against the GNOME 50 runtime. GNOME 50 removed its
+X11 session, so the book is now written for Wayland only, and
+[Getting Started](01-getting-started.html#wayland) says what that rules out.
+
+Sections added for the APIs that became the idiomatic answer in the meantime:
+
+- Adaptive layout with `Adw.Breakpoint`, in
+  [Getting Started](01-getting-started.html#breakpoints).
+- `Adw.Dialog` and `Adw.AlertDialog`, which adapt to a bottom sheet at phone
+  width, in [Getting Started](01-getting-started.html#adw-dialogs).
+- Keyboard shortcuts — accelerators, `Gtk.ShortcutController` and
+  `Adw.ShortcutsDialog` — in [Getting Started](01-getting-started.html#shortcuts).
+- Copy and paste with `Gdk.Clipboard`, in [More GTK 4](03-more-gtk4.html#clipboard).
+- Colour scheme, accent colour and high contrast through `Adw.StyleManager`, in
+  [Animation and Transitions](11-animation.html#style-manager).
+- `Gtk.GraphicsOffload`, in
+  [Audio and Video](09-multimedia-gstreamer.html#graphics-offload).
+
+Every example is now annotated with type hints.
 
 Part II — Qt 6 with PySide6 — is not written yet.
 
