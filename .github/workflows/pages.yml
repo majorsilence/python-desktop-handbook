@@ -49,6 +49,19 @@ jobs:
         # A session bus, because some examples own a name on it.
         run: dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
 
+      - name: Run the testing chapter's test suite
+        env:
+          GTK_A11Y: none
+          GSK_RENDERER: cairo
+        # The tests of examples/gtk4/testing/, which is what the testing chapter
+        # teaches. --system-site-packages so the venv can see the distribution's
+        # PyGObject; see that chapter for why.
+        run: |
+          python3 -m venv --system-site-packages .venv-test
+          .venv-test/bin/pip install --quiet pytest
+          cd examples/gtk4/testing
+          dbus-run-session -- xvfb-run -a ../../../.venv-test/bin/python -m pytest -q
+
       - name: Take the screenshots
         env:
           GTK_A11Y: none

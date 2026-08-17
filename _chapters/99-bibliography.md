@@ -82,7 +82,7 @@ The GTK Inspector
 
 `flatpak-builder`
 : For building the manifest in
-  [Packaging and Distribution](14-packaging.html).
+  [Packaging and Distribution](15-packaging.html).
 
 ## Where the previous edition went
 

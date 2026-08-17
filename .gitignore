@@ -8,6 +8,8 @@ Gemfile.lock
 *.pdf
 __pycache__/
 *.pyc
+.venv-test/
+.pytest_cache/
 examples/gtk4/multimedia/sample.webm
 examples/gtk4/multimedia/transcoded.ogg
 examples/gtk4/cairo/surfaces.png

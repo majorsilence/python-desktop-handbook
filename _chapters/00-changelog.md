@@ -53,7 +53,7 @@ Part I — GTK 4 with PyGObject — is complete:
   gtkmozembed, and the JavaScript bridge.
 - **[Internationalization](13-internationalization.html)** — gettext without
   intltool, and the two text-domain bindings GTK needs.
-- **[Packaging and Distribution](14-packaging.html)** — replaces IronPython and
+- **[Packaging and Distribution](15-packaging.html)** — replaces IronPython and
   Gtk#. Meson, GResource, AppStream metadata and Flatpak.
 - **[Migrating from PyGTK](92-migrating-from-pygtk.html)** — a translation table
   from the previous edition's idioms.

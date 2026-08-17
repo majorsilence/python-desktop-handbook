@@ -23,6 +23,7 @@ ground with Qt 6 and PySide6, is not written yet.
 | `_layouts/`, `assets/`, `index.md`, `_config.yml` | The Jekyll site. |
 | `tools/build-pdf.sh` | Builds the PDF from `_chapters/` via pandoc + LaTeX. |
 | `tools/smoke-test.py` | Starts every example and shuts it down again. |
+| `examples/gtk4/testing/` | The testing chapter's application and its pytest suite. |
 | `tools/make-figures.sh` | Regenerates the figures that examples draw. |
 | `tools/make-screenshots.py` | Regenerates the screenshots of the examples' windows. |
 | `tools/lyx2md.py` | The one-shot LyX → Markdown migration, kept for reference. |
@@ -90,6 +91,17 @@ dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4
 It catches import errors, renamed methods, signals that no longer exist and
 anything that raises while the first window is built — including exceptions
 inside a signal handler, which GTK otherwise prints and swallows.
+
+### The tests
+
+The testing chapter's example has a real pytest suite, and it runs on each build:
+
+```sh
+make test
+```
+
+That builds a `--system-site-packages` virtual environment, because PyGObject
+comes from the distribution and a plain venv cannot see it.
 
 ### The figures
 
