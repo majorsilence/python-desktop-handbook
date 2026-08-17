@@ -657,6 +657,46 @@ The same asynchronous shape covers the other dialogs: `Gtk.FileDialog`,
 
 The full example is `examples/gtk4/widgets/dialogs.py`.
 
+#### In a libadwaita application, use libadwaita's {#adw-dialogs}
+
+> **libadwaita 1.5.** `Adw.Dialog` and `Adw.AlertDialog` need it.
+
+`Gtk.AlertDialog` is correct and stays correct. But in an application that is
+already using libadwaita, `Adw.AlertDialog` is the better one, for a reason that
+only shows up at phone width: instead of opening a separate floating window it
+slides up from the bottom as a sheet inside the parent. Same code, two shapes,
+chosen by the space available — the [breakpoints](#breakpoints) idea again, this
+time with nothing to configure.
+
+```python
+dialog = Adw.AlertDialog(heading="Delete this file?",
+                         body="Once it is gone it is gone. There is no undo.")
+dialog.add_response("cancel", "Cancel")
+dialog.add_response("delete", "Delete")
+dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+dialog.set_default_response("cancel")   # Enter
+dialog.set_close_response("cancel")     # Escape, or dismissal
+dialog.choose(parent, None, on_choice, label)
+```
+
+Two improvements on the GTK version are worth naming:
+
+**Responses are strings, not indices.** `choose_finish()` gives you `"delete"`,
+not `1`. Insert a button and nothing silently starts meaning something else.
+
+**Dismissal is not an error.** `Gtk.AlertDialog.choose_finish()` raises
+`GLib.Error` when the user presses Escape; `Adw.AlertDialog.choose_finish()`
+returns the close response you already named. There is no `try` to forget.
+
+For a dialog with your own content in it rather than a message and buttons,
+subclass `Adw.Dialog`: set a title, set a child, and `present(parent)` it.
+`present()` takes any widget, not only a window — libadwaita walks up the tree to
+find where the dialog belongs. `Adw.PreferencesDialog` and `Adw.AboutDialog` are
+the two you get pre-built, and they replace the `Adw.PreferencesWindow` and
+`Adw.AboutWindow` you will see in older code.
+
+The full example is `examples/gtk4/widgets/adw-dialogs.py`.
+
 ### Feedback: toasts instead of a status bar {#toasts}
 
 `GtkStatusbar` is deprecated and has no direct replacement, because the pattern it
@@ -743,6 +783,116 @@ The full example is `examples/gtk4/adwaita-window.py`.
 
 ![The same widgets as libadwaita rows, with no hand-written spacing](images/screenshots/adwaita-window.png){: #fig-adwaita-window width="60%"}
 
+### Adaptive layouts {#breakpoints}
+
+> **libadwaita 1.4.** `Adw.Breakpoint` needs it.
+
+A window is not one width. The user drags it narrow, tiles it beside something
+else, or runs your application on a phone, and a layout built for 1200 pixels
+has to become a layout that works in 400. Doing that by hand — a `notify::width`
+handler, some arithmetic, a pile of `set_visible()` calls, and a bug where you
+forget to put something back — is the wrong approach, and libadwaita replaces it
+with a declarative one.
+
+A **breakpoint** is a condition plus a list of properties to set while it holds:
+
+```python
+narrow = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 600sp"))
+narrow.add_setter(self.split, "collapsed", True)
+narrow.add_setter(self.show_sidebar_button, "visible", True)
+self.add_breakpoint(narrow)
+```
+
+There is no handler and no arithmetic. While the window is 600sp or narrower the
+split view is collapsed and the button is visible; when it stops being narrow
+libadwaita **puts the old values back**. That last part is what you get wrong
+writing it yourself, because it means remembering what every property was before
+you changed it.
+
+Two details in that snippet earn their place:
+
+**`sp`, not `px`.** A scalable pixel is a pixel at the user's text scaling
+factor. Someone running at 125% text size gets a breakpoint that fires at a
+proportionally larger real width, which is what you want — the layout is tight
+because the *content* does not fit, and their content is bigger. Conditions can
+also be written on height, and combined: `max-width: 600sp and max-height: 400sp`.
+
+**600sp is the conventional divide** between a phone-shaped window and a
+desktop-shaped one. Use it unless your content has an opinion.
+
+The widget being collapsed here is `Adw.OverlaySplitView`, which is a sidebar
+beside the content when there is room and a sidebar sliding over the content
+when there is not. Its siblings are worth knowing by name, because between them
+they cover most of what a window needs to do at two sizes:
+
+`Adw.OverlaySplitView`
+: Sidebar and content. Collapses to an overlay.
+
+`Adw.NavigationSplitView`
+: The same, but collapses into a navigation stack — the sidebar becomes a page
+  you go *back* from, which is the right model for a list that leads to a detail
+  view.
+
+`Adw.ViewSwitcher` and `Adw.ViewSwitcherBar`
+: Tabs in the header bar when wide; a bar along the bottom, thumb-reachable, when
+  narrow. Set the bar's `reveal` from a breakpoint and hide the header one.
+
+`Adw.ToolbarView`
+: Not adaptive itself, but it is what lets a breakpoint move a toolbar from the
+  top to the bottom without rebuilding anything.
+
+The full example is `examples/gtk4/adaptive-window.py`. Resize the window past
+600sp and the sidebar changes behaviour with no code running in between.
+
+### Keyboard shortcuts {#shortcuts}
+
+Menus give you accelerators nearly free, and the reason to do it through actions
+rather than key handlers is that the action already exists and the menu item
+already names it:
+
+```python
+app.set_accels_for_action("app.save", ["<Control>s"])
+app.set_accels_for_action("app.shortcuts", ["<Control>question", "F1"])
+```
+
+The plural is not decoration — an action can have several accelerators, which is
+how one command answers to both a modern and a legacy key.
+
+For a key that only means something while part of the window has focus, attach a
+`Gtk.ShortcutController` to that widget instead:
+
+```python
+controller = Gtk.ShortcutController()
+controller.set_scope(Gtk.ShortcutScope.LOCAL)
+controller.add_shortcut(Gtk.Shortcut(
+    trigger=Gtk.ShortcutTrigger.parse_string("<Control>d"),
+    action=Gtk.CallbackAction.new(self.on_duplicate)))
+self.add_controller(controller)
+```
+
+`Gtk.CallbackAction` is the escape hatch that runs a Python function, and the
+function **must return `True`** to say it handled the key. Return `False` or fall
+off the end and GTK keeps looking for someone else to handle it, which presents
+as a shortcut that works only sometimes.
+
+The third part of the job is telling the user the keys exist. `Adw.ShortcutsDialog`
+(libadwaita 1.8) is the standard window for that, bound to `<Control>question` by
+convention:
+
+```python
+dialog = Adw.ShortcutsDialog()
+section = Adw.ShortcutsSection(title="General")
+section.add(Adw.ShortcutsItem(title="Save", accelerator="<Control>s"))
+dialog.add(section)
+dialog.present(window)
+```
+
+Keep the accelerator strings in one table and build the menu, the bindings and
+the dialog from it. Three hand-maintained copies of the same list is three
+chances for the help window to start lying.
+
+The full example is `examples/gtk4/shortcuts.py`.
+
 ## Summary
 
 You can now build a GTK 4 application: an application object with an activate
@@ -759,7 +909,14 @@ The things to carry forward:
 - Radio buttons are grouped check buttons.
 - Menus are models plus actions, and the action prefix (`app.` or `win.`) matters.
 - Dialogs are asynchronous, and their `*_finish()` methods raise when dismissed.
+  `Adw.AlertDialog` uses string responses and does not raise on dismissal.
 - Reach for libadwaita before you reach for a hand-built layout.
+- Adaptive layout is a breakpoint — a condition and some property setters — not a
+  resize handler. Measure in `sp`, and 600sp is the usual divide.
+- Bind keys to actions with `set_accels_for_action`; use a `Gtk.ShortcutController`
+  only for keys that are local to a widget, and return `True` from its callback.
+- A window cannot position itself. Wayland decides, which is why every dialog
+  gets a parent.
 
 [GObject](02-gobject.html) is next: properties, signals and bindings, which are
 what the list widgets in the chapter after it are built on.

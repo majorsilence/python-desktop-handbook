@@ -277,6 +277,74 @@ anything slower stops feeling responsive and starts feeling broken. And never
 animate something the user is waiting on — a spinner during a two-second load is
 fine, a 600 ms slide before a menu opens is not.
 
+## Colour scheme, accent and contrast {#style-manager}
+
+Reduced motion is one of four preferences in this area, and the other three are
+about appearance rather than movement: whether the interface is dark, which
+accent colour the user picked, and whether they need higher contrast. All three
+arrive through `Adw.StyleManager`, and libadwaita applies all three to its own
+widgets without you doing anything.
+
+```python
+style = Adw.StyleManager.get_default()
+
+style.get_dark()                          # is the interface dark right now
+style.get_accent_color()                  # Adw.AccentColor, since 1.6
+style.get_high_contrast()
+style.get_system_supports_color_schemes() # False on a desktop that has no setting
+```
+
+Each is a property, so each has a `notify::` signal, and connecting to those three
+signals is the entire job of "responding to the theme". There is nothing to poll:
+
+```python
+for property_name in ("dark", "accent-color", "high-contrast"):
+    style.connect(f"notify::{property_name}", self.on_style_changed)
+```
+
+**The default is to follow the desktop, and the default is correct.**
+`Adw.ColorScheme.DEFAULT` means "whatever the user's session says". If you offer a
+preference at all, offer three states — system, light, dark — with system
+selected, and store the choice in [GSettings](08-desktop-integration.html#gsettings).
+An application that opens dark on a light desktop because its author prefers dark
+is an application that has substituted its taste for the user's.
+
+```python
+style.set_color_scheme(Adw.ColorScheme.DEFAULT)      # follow the desktop
+style.set_color_scheme(Adw.ColorScheme.FORCE_DARK)   # the user asked for dark
+```
+
+The `PREFER_` variants are requests the desktop may decline; the `FORCE_` ones are
+not. Use `FORCE_` for an explicit user choice and `DEFAULT` for everything else.
+
+### What this means for anything you drew yourself {#theme-and-drawing}
+
+The stylesheet reaches widgets. It does not reach a `Gtk.DrawingArea`, a Cairo
+chart or a custom `snapshot()`, and that is where theme support usually breaks: a
+window that goes dark around a graph that stays white.
+
+Two rules cover it. Repaint when the theme changes — `queue_draw()` from the
+`notify::` handler above. And take your colours from the theme rather than
+hardcoding them:
+
+```python
+rgba = style.get_accent_color().to_standalone_rgba()
+cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, rgba.alpha)
+```
+
+`to_standalone_rgba()` rather than the raw accent, because it returns the colour
+adjusted for the current light or dark background — the brand blue is not legible
+on both. For the ordinary foreground and background, look up the named colours
+with `widget.get_color()` and the CSS variables libadwaita defines
+(`--accent-bg-color`, `--window-fg-color` and the rest) instead of picking greys
+by eye.
+
+High contrast is the one people skip, and it is the one with a legal shape in some
+markets. When `get_high_contrast()` is true, drop decorative low-contrast fills
+and give things borders.
+
+The full example is `examples/gtk4/animation/style-manager.py`.
+
 ## Summary
 
 - Clutter is gone. GTK 4 has the scene graph, the frame clock and the transforms;
@@ -291,5 +359,12 @@ fine, a 600 ms slide before a menu opens is not.
 - Transform a whole widget by transforming its snapshot before chaining up.
 - Check `gtk-enable-animations` and `prefers-reduced-motion`, and cancel with
   `skip()`.
+- `Adw.StyleManager` reports dark, accent and high contrast as properties. Connect
+  to their `notify::` signals; do not poll.
+- Follow the desktop's colour scheme by default; a preference has three states,
+  not two.
+- Anything you draw yourself has to repaint on a theme change and take its colours
+  from the theme. `to_standalone_rgba()` gives an accent that works on both
+  backgrounds.
 
 [Embedding Web Content](12-web-content.html) is next.

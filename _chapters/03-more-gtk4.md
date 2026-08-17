@@ -335,6 +335,55 @@ The full example is `examples/gtk4/drag-and-drop.py`.
 
 ![Drag sources on the left, a drop target on the right](images/screenshots/drag-and-drop.png){: #fig-drag-and-drop width="65%"}
 
+## Copy and paste {#clipboard}
+
+The clipboard is the same content machinery as drag and drop, which is why it
+belongs here rather than three chapters away. It hangs off the display, so you
+ask a widget for it:
+
+```python
+self.get_clipboard().set(self.entry.get_text())
+```
+
+`set()` takes a Python value and works out which content formats to advertise.
+Underneath it is `set_content()` with a `Gdk.ContentProvider`, which is what you
+use when you want to offer several formats at once — plain text *and* HTML, say —
+built with `Gdk.ContentProvider.new_union()`.
+
+Reading is asynchronous, and there is no synchronous version to wish for:
+
+```python
+def on_paste(self, _button):
+    self.get_clipboard().read_text_async(None, self.on_text_ready)
+
+
+def on_text_ready(self, clipboard, result):
+    try:
+        text = clipboard.read_text_finish(result)
+    except GLib.Error as error:
+        self.status.set_text(f"nothing to paste ({error.message})")
+        return
+    self.status.set_text(text)
+```
+
+That is not API pedantry. On Wayland the clipboard's contents live in whichever
+application owns the selection; fetching them is inter-process communication with
+a program that may be busy, may be slow, and may exit halfway through. GTK 3's
+`gtk_clipboard_wait_for_text()` blocked the main loop on exactly that, and it is
+gone. The `try` is the normal path, not the exceptional one: an empty clipboard,
+or one holding a format you did not ask for, arrives as a `GLib.Error`.
+
+`read_texture_async()` is the same shape for images, and `read_value_async()` for
+anything else with a registered type.
+
+**There are two clipboards on Linux.** `get_clipboard()` is the ordinary one that
+Ctrl+C fills. `get_primary_clipboard()` is the primary selection — filled just by
+selecting text, pasted with middle-click. Text widgets already maintain the
+primary selection for you; the thing not to do is write to it on Ctrl+C, which
+overwrites a selection the user made somewhere else.
+
+The full example is `examples/gtk4/clipboard.py`.
+
 ## Images and pictures {#images}
 
 There are two widgets, and picking the wrong one is the usual cause of an image
@@ -515,6 +564,8 @@ The full example is `examples/gtk4/notification.py`.
   `get_path()`, and the portal works for free.
 - Drag and drop is a `Gtk.DragSource` and a `Gtk.DropTarget` added as controllers,
   moving `GValue`s.
+- The clipboard uses the same content types as drag and drop. Writing is
+  immediate; reading is asynchronous and raises when there is nothing to read.
 - `Gtk.Image` is for icons, `Gtk.Picture` is for content.
 - Layouts can live in `.ui` files; `Gtk.Template` binds one to a class. Glade is
   not part of this any more.

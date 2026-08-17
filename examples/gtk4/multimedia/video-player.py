@@ -10,17 +10,18 @@ The chapter's other examples show the pipeline underneath, for when you need it.
 """
 
 import sys
+from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Gio, GObject, Gtk
 
 from sample_media import ensure_sample
 
 
 class Player(Gtk.ApplicationWindow):
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.set_title("Video Player")
         self.set_default_size(480, 400)
@@ -30,6 +31,17 @@ class Player(Gtk.ApplicationWindow):
 
         video = Gtk.Video(media_stream=self.media)
         video.set_vexpand(True)
+
+        # GtkGraphicsOffload (GTK 4.14) asks the compositor to put the video on
+        # its own hardware plane instead of compositing every frame into the
+        # window. When it works the frames never pass through GTK's renderer at
+        # all, which is a large saving in power on a laptop and the difference
+        # between smooth and not on a slow GPU. When it does not work -- the
+        # wrong format, the wrong compositor, anything drawn on top -- it
+        # silently falls back to ordinary rendering, so it is safe to ask for.
+        offload = Gtk.GraphicsOffload(child=video)
+        offload.set_enabled(Gtk.GraphicsOffloadEnabled.ENABLED)
+        offload.set_vexpand(True)
 
         self.position = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 0.001)
         self.position.set_draw_value(False)
@@ -60,7 +72,7 @@ class Player(Gtk.ApplicationWindow):
         box.set_margin_bottom(6)
         box.set_margin_start(6)
         box.set_margin_end(6)
-        box.append(video)
+        box.append(offload)
         box.append(controls)
         self.set_child(box)
 
@@ -70,7 +82,7 @@ class Player(Gtk.ApplicationWindow):
 
         self.media.play()
 
-    def on_timestamp(self, media, _pspec):
+    def on_timestamp(self, media: Gtk.MediaStream, _pspec: GObject.ParamSpec) -> None:
         duration = media.get_duration()
         if duration <= 0:
             return
@@ -86,23 +98,23 @@ class Player(Gtk.ApplicationWindow):
             f"{format_time(media.get_timestamp())} / {format_time(duration)}"
         )
 
-    def on_seek(self, scale):
+    def on_seek(self, scale: Gtk.Scale) -> None:
         duration = self.media.get_duration()
         if duration > 0 and self.media.is_seekable():
             self.media.seek(int(scale.get_value() * duration))
 
-    def on_error(self, media, _pspec):
+    def on_error(self, media: Gtk.MediaStream, _pspec: GObject.ParamSpec) -> None:
         error = media.get_error()
         if error is not None:
             self.time.set_text(f"error: {error.message}")
 
 
-def format_time(microseconds):
+def format_time(microseconds: int) -> str:
     seconds = int(microseconds // 1_000_000)
     return f"{seconds // 60}:{seconds % 60:02d}"
 
 
-def on_activate(app):
+def on_activate(app: Gtk.Application) -> None:
     path = sys.argv[1] if len(sys.argv) > 1 else ensure_sample()
     Player(path, application=app).present()
 

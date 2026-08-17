@@ -422,6 +422,32 @@ the sink. That does not work on Wayland, it does not work with a scaled display,
 it is not how it is done any more. If you find code calling
 `set_xwindow_id()`, it is from that era.
 
+### Let the compositor do the work {#graphics-offload}
+
+> **GTK 4.14.** `Gtk.GraphicsOffload` needs it.
+
+Playing video the ordinary way means every frame is uploaded, composited into the
+window with everything else, and drawn. `Gtk.GraphicsOffload` asks for the frames
+to go straight to a hardware plane in the compositor instead, skipping GTK's
+renderer entirely. Wrap the video widget in one:
+
+```python
+offload = Gtk.GraphicsOffload(child=video)
+offload.set_enabled(Gtk.GraphicsOffloadEnabled.ENABLED)
+```
+
+That is the whole change. On a laptop it is a visible saving in power; on a slow
+GPU it can be the difference between smooth playback and dropped frames.
+
+It is a *request*, and the conditions are easy to break without noticing: the
+frames have to be in a format the compositor can scan out, nothing may be drawn on
+top of the widget, and it has to be rectangular and unrotated. Put a control
+overlay across the video and offloading quietly stops. Nothing fails when it does —
+GTK falls back to compositing normally — which is why it is safe to ask for and
+also why you should check with `GDK_DEBUG=offload` rather than assume.
+
+`Gtk.Video`, `Gtk.Picture` and a `gtk4paintablesink` paintable all work with it.
+
 ## Summary
 
 - For playing a file, `Gtk.MediaFile` and `Gtk.Video` are the whole answer.
@@ -440,6 +466,9 @@ it is not how it is done any more. If you find code calling
   are microseconds.
 - Video in a custom widget is `gtk4paintablesink` and a `Gtk.Picture`, not an X11
   window id.
+- Wrap the video widget in a `Gtk.GraphicsOffload` to hand frames to the
+  compositor. It fails silently back to normal rendering, so verify with
+  `GDK_DEBUG=offload`.
 
 [D-Bus](10-dbus.html) is next: talking to the rest of the session, and to programs
 that are not yours.
