@@ -37,6 +37,11 @@ OUTPUT_DIR = REPO / "images" / "screenshots"
 # How long to let a window settle before capturing, unless an entry says otherwise.
 DEFAULT_SETTLE_MS = 700
 
+# How many further passes the shutter gets if the window is not drawable yet.
+# The interval between them is the same as the delay before the first one, so
+# this is a few seconds at most, well inside the 30s guard below.
+RETRIES = 12
+
 
 # --------------------------------------------------------------------------------
 # Preparing a window
@@ -267,8 +272,21 @@ def shoot_one(source: str) -> tuple[bool, str]:
                     self.quit()
                     return GLib.SOURCE_REMOVE
 
+            # Every failure capture() reports is really "not ready yet": no
+            # surface, no renderer, no size, nothing drawn. Under Xvfb any of
+            # them can still be true at the instant the shutter opens, and the
+            # window becomes drawable a frame or two later -- so keep opening
+            # the shutter rather than taking one fixed-time shot and calling a
+            # slow frame a failure. Only the last error survives, so a window
+            # that never draws still reports why.
+            attempts = {"left": RETRIES}
+
             def take():
-                state["error"] = capture(window, output)
+                error = capture(window, output)
+                if error and attempts["left"] > 0:
+                    attempts["left"] -= 1
+                    return GLib.SOURCE_CONTINUE
+                state["error"] = error
                 self.quit()
                 return GLib.SOURCE_REMOVE
 
