@@ -169,8 +169,8 @@ window.webkit.messageHandlers.fromPage.postMessage(
 ```
 
 ```python
-def on_message(self, _manager, message):
-    payload = message.to_string()       # a JSCValue again
+def on_message(self, _manager, value):
+    payload = value.to_string()         # a JSCValue again
 ```
 
 The content manager has to be attached **when the view is created** — it is a

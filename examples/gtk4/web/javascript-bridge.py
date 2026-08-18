@@ -18,7 +18,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Gio, GLib, Gtk, WebKit
+gi.require_version("JavaScriptCore", "6.0")
+from gi.repository import Gio, GLib, Gtk, JavaScriptCore, WebKit
 
 PAGE = """
 <!doctype html>
@@ -100,10 +101,12 @@ class Window(Gtk.ApplicationWindow):
     # -- page -> Python ---------------------------------------------------------
 
     def on_message(self, _manager: WebKit.UserContentManager,
-                   message: WebKit.JavascriptResult) -> None:
-        # The payload is a JSCValue. to_string() for text, or to_json() for
-        # anything structured.
-        payload = message.to_string()
+                   value: JavaScriptCore.Value) -> None:
+        # The payload is a JSCValue -- a live handle on a JavaScript value, not
+        # a copy of one. to_string() for text, to_json() for anything
+        # structured. (WebKit 4.x wrapped it in a WebKitJavascriptResult; the
+        # 6.0 API hands you the value itself.)
+        payload = value.to_string()
         self.status.set_text(f"the page said: {payload}")
 
     # -- Python -> page ---------------------------------------------------------
