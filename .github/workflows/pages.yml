@@ -19,7 +19,15 @@ concurrency:
 jobs:
   examples:
     name: Smoke-test the examples
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest. The book targets the GNOME 50 stack -- GTK 4.22,
+    # libadwaita 1.9, PyGObject 3.56 -- and ubuntu-latest is still 24.04, which
+    # carries libadwaita 1.5 and PyGObject 3.48. Examples that use anything
+    # newer (Adw.ShortcutsDialog, StyleManager.get_accent_color, gi.events)
+    # fail there, and a smoke test running two years behind the book proves
+    # nothing about the book. 26.04 is the LTS the version table names.
+    # It is still a preview runner image and carries no SLA; if it starts
+    # failing for its own reasons, that is why.
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -34,17 +42,20 @@ jobs:
             libgtk-4-media-gstreamer \
             libglib2.0-bin gettext \
             xvfb dbus-x11
-          pip install PySide6
+          # Throwaway runner, so installing beside the distribution's Python is
+          # fine; 26.04 marks that environment externally managed, hence the flag.
+          pip install --break-system-packages PySide6
 
       - name: Start every example and shut it down again
         env:
           GTK_A11Y: none
           GSK_RENDERER: cairo
           QT_QPA_PLATFORM: offscreen
-          # WebKit sandboxes its web process with bubblewrap, and Ubuntu 24.04
-          # restricts unprivileged user namespaces, so the web process cannot
-          # start on the runner. This is a throwaway machine loading a local
-          # page; never set it anywhere real. See the web content chapter.
+          # WebKit sandboxes its web process with bubblewrap, and Ubuntu's
+          # AppArmor policy restricts unprivileged user namespaces, so the web
+          # process cannot start on the runner. This is a throwaway machine
+          # loading a local page; never set it anywhere real. See the web
+          # content chapter.
           WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
         # A session bus, because some examples own a name on it.
         run: dbus-run-session -- xvfb-run -a python3 tools/smoke-test.py examples/gtk4

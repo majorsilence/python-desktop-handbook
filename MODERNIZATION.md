@@ -20,6 +20,7 @@ PyGObject 3.56, Python 3.12+, Wayland only.
 | asyncio | Rewritten around `gi.events.GLibEventLoop`: awaitable Gio methods, coroutines that may touch widgets, task-reference and task-creation traps. New example `threads/asyncio-await.py`; the worker-thread bridge is kept as the pre-3.50 fallback. |
 | Type hints | Every function in `examples/` is annotated — 0 before, all of them now. |
 | Testing | New **chapter 14**, with a three-file example application and 18 passing tests. Packaging moved to chapter 15. `make test` and a CI step. |
+| CI stack | The examples job runs on `ubuntu-26.04`, not `ubuntu-latest`. `ubuntu-latest` is still 24.04 — libadwaita 1.5, PyGObject 3.48 — so it cannot run the material above, and a smoke test two releases behind the book proves nothing about the book. |
 
 ## To do
 
@@ -110,7 +111,27 @@ Decide between two positions and write it down:
 
 Either way, add **ruff** for unused imports and import order, and run it in CI.
 
-### 6. Meta
+### 6. The Python floor is no longer tested
+
+Chapter 1 says Python 3.12 is the floor. That used to be checked for free, because
+CI ran on Ubuntu 24.04 and 24.04 is 3.12; moving to 26.04 for the GNOME 50 stack
+means CI now only ever runs 3.14.
+
+The difference is not cosmetic. Under PEP 649 (3.14) annotations are lazy, so an
+annotation naming a class that does not exist is invisible until something asks
+for it; under 3.12 the same annotation is evaluated at import and raises. That is
+exactly how `WebKit.JavascriptResult` — a WebKit 4.x class that the 6.0 API
+dropped — reached main annotated on a method and passing locally.
+
+Pick one:
+
+1. **Test both.** A second job on `ubuntu-24.04` running only the examples that
+   do not need GNOME 50 APIs. Real coverage, and a list to maintain.
+2. **Raise the floor** to whatever the GNOME 50 distributions ship, and say so in
+   the version table. Nothing to maintain, and it narrows the audience on paper
+   more than in practice.
+
+### 7. Meta
 
 - A *what this book assumes you know* section.
 - A reader-facing errata and versioning story; the changelog covers editions, not
